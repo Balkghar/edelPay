@@ -1,0 +1,26 @@
+# Node junk
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# TypeScript build output
+dist/
+build/
+out/
+
+# TS cache
+*.tsbuildinfo
+
+# Env secrets you’ll forget about and leak
+.env
+.env.*
+
+# Editor nonsense
+.vscode/
+.idea/
+.DS_Store
+
+# OS trash
+Thumbs.db
