@@ -24,7 +24,7 @@ A modern, secure payment platform built on the XRP Ledger (XRPL) with multi-wall
 ### User Flows
 
 1. **Not Connected Users** → KYC Page (for verification)
-2. **Connected but Not Onboarded** → KYC Page (for verification)
+2. **Connected but Not Onboarded** -> KYC Page (for verification)
 3. **Connected and Onboarded** → Dashboard (payment management)
 
 ## 🏗️ Project Structure
