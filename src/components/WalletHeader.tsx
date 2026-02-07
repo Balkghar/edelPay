@@ -67,6 +67,14 @@ export default function WalletHeader() {
                 >
                   Payer
                 </Link>
+                <Link 
+                  href="/fdc-demo" 
+                  className={`text-sm font-medium transition-colors hover:text-blue-600 ${
+                    router.pathname === '/fdc-demo' ? 'text-blue-600' : 'text-gray-600'
+                  }`}
+                >
+                  FDC Demo
+                </Link>
               </nav>
             )}
           </div>
