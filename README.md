@@ -1,200 +1,70 @@
-# Scaffold-XRP
+This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
-A Next.js-based development stack for building decentralized applications on XRPL with smart contracts. Built with Turborepo, inspired by Scaffold-ETH-2.
+# Welcome to wallet connect template for xrpl!
 
-## Features
+This is a template for a wallet connect app for the xrpl. It is built with next.js, shadcn and tailwind css!
 
-- **Next.js 14** - Modern React framework with App Router
-- **Turborepo** - High-performance build system for monorepos
-- **XRPL Integration** - Full XRPL client with WebSocket support
-- **Multi-Wallet Support** - Connect with Xaman, Crossmark, GemWallet, or manual address
-- **Network Switching** - Easy switching between AlphaNet, Testnet, and Devnet
-- **Smart Contract Tools** - Deploy and interact with XRPL smart contracts
-- **Faucet Integration** - Request test XRP directly from the UI
-- **Transaction History** - View your transaction history with explorer links
-- **Debug Panel** - Execute custom XRPL commands and view network info
-- **Sample Contract** - Counter contract example in Rust
+## Which wallets are supported?
 
-## Quick Start
+This template supports the following wallets:
 
-### Prerequisites
+- [XUMM](https://xumm.app/)  
+- [GEM](https://gemwallet.app/)
+- [CROSSMARK](https://crossmark.io/)
 
-- Node.js 18+ and pnpm 8+
-- Rust (optional, for building contracts)
+## How to use this template?
+> Note: This template comes with JWT authentication.
 
-### Installation
+To use this template, you can clone this repository and start building your app. You can also use this template to create a new starter project on xrpl!
 
-```
-# Clone the repository
-git clone https://github.com/yourusername/scaffold-xrp.git
-cd scaffold-xrp
+To get started, first head over to xumm dev portal [here](https://apps.xumm.dev/) and get your api keys and use the `.env.template` file as a reference to create a `.env` file with your api keys.
 
-# Install dependencies
-pnpm install
+Dont forget to also pass in a `ENC_KEY` in your `.env` file. This is the key that will be used to encrypt the user's address to store in cookies.
 
-# Start the development server
+# Future update plans!
+
+- [ ] Add support for wallet connect.
+- [ ] Integrate next-auth for authentication.
+- [ ] Make it an npm package!
+
+
+# Next.js readme 
+
+## Getting Started
+
+First, run the development server:
+
+```bash
+npm run dev
+# or
+yarn dev
+# or
 pnpm dev
+# or
+bun dev
 ```
 
-The app will be available at [http://localhost:3000](http://localhost:3000)
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-## Project Structure
+You can start editing the page by modifying `pages/index.tsx`. The page auto-updates as you edit the file.
 
-```
-scaffold-xrp/
-├── apps/
-│   └── web/                 # Next.js application
-│       ├── app/             # Next.js App Router
-│       ├── components/      # React components
-│       └── lib/             # Utilities and configurations
-├── packages/
-│   └── bedrock/             # Smart contracts (Rust)
-│       ├── src/
-│       │   └── lib.rs       # Counter contract example
-│       └── Cargo.toml
-├── package.json
-├── pnpm-workspace.yaml
-└── turbo.json
-```
+[API routes](https://nextjs.org/docs/api-routes/introduction) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.ts`.
 
-## Usage
+The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/api-routes/introduction) instead of React pages.
 
-### Connecting Your Wallet
+This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
 
-1. Click "Connect Wallet" in the header
-2. Choose your wallet (Xaman, Crossmark, GemWallet) or enter address manually
-3. Approve the connection in your wallet extension
+## Learn More
 
-### Getting Test XRP
+To learn more about Next.js, take a look at the following resources:
 
-1. Connect your wallet
-2. Go to the "Faucet" section
-3. Click "Request Test XRP"
-4. Wait for the transaction to complete
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-### Deploying a Smart Contract
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
 
-1. Build your contract (see [Building Contracts](#building-contracts))
-2. Go to "Deploy Contract"
-3. Upload your `.wasm` file
-4. Confirm the transaction (requires 100 XRP fee)
-5. Copy the contract address from the confirmation
+## Deploy on Vercel
 
-### Interacting with Contracts
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-1. Go to "Interact with Contract"
-2. Enter the contract address
-3. Enter the function name (e.g., `increment`)
-4. Add arguments if needed
-5. Click "Call Contract Function"
-6. Confirm the transaction in your wallet
-
-## Building Contracts
-
-### Install Rust
-
-```
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-rustup target add wasm32-unknown-unknown
-```
-
-### Build the Counter Contract
-
-```
-cd packages/bedrock
-cargo build --target wasm32-unknown-unknown --release
-```
-
-The compiled WASM file will be at:
-```
-target/wasm32-unknown-unknown/release/counter.wasm
-```
-
-See [packages/bedrock/README.md](packages/bedrock/README.md) for more details.
-
-## Development
-
-### Available Commands
-
-```
-pnpm dev          # Start development server
-pnpm build        # Build all packages
-pnpm lint         # Lint all packages
-pnpm format       # Format code with Prettier
-pnpm clean        # Clean build artifacts
-```
-
-### Environment Variables
-
-Create a `.env.local` file in `apps/web/`:
-
-```
-# Optional: Configure default network
-NEXT_PUBLIC_DEFAULT_NETWORK=alphanet
-```
-
-## Networks
-
-### AlphaNet (Default)
-- **WebSocket:** wss://alphanet.nerdnest.xyz
-- **Network ID:** 21465
-- **Faucet:** https://alphanet.faucet.nerdnest.xyz/accounts
-- **Explorer:** https://alphanet.xrpl.org
-
-### Testnet
-- **WebSocket:** wss://s.altnet.rippletest.net:51233
-- **Network ID:** 1
-- **Faucet:** https://faucet.altnet.rippletest.net/accounts
-- **Explorer:** https://testnet.xrpl.org
-
-### Devnet
-- **WebSocket:** wss://s.devnet.rippletest.net:51233
-- **Network ID:** 2
-- **Faucet:** https://faucet.devnet.rippletest.net/accounts
-- **Explorer:** https://devnet.xrpl.org
-
-## Components
-
-### Core Components
-
-- **Header** - Navigation with wallet connection and network switching
-- **AccountInfo** - Display wallet address and balance
-- **FaucetRequest** - Request test XRP from network faucet
-- **ContractDeployment** - Upload and deploy WASM contracts
-- **ContractInteraction** - Call contract functions
-- **TransactionHistory** - View transaction history
-- **DebugPanel** - Execute custom XRPL commands
-
-### Providers
-
-- **XRPLProvider** - Global state for XRPL connection, wallet, and network
-
-## Technologies
-
-- [Next.js 14](https://nextjs.org/)
-- [React 18](https://react.dev/)
-- [Tailwind CSS](https://tailwindcss.com/)
-- [Turborepo](https://turbo.build/)
-- [xrpl.js](https://js.xrpl.org/)
-- [Bedrock](https://github.com/XRPL-Commons/Bedrock)
-
-## Resources
-
-- [XRPL Documentation](https://xrpl.org/)
-- [XRPL Smart Contracts Guide](https://xrpl.org/docs.html)
-- [Bedrock GitHub](https://github.com/XRPL-Commons/Bedrock)
-- [Scaffold-ETH-2](https://github.com/scaffold-eth/scaffold-eth-2)
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-MIT License - see LICENSE file for details
-
-## Acknowledgments
-
-- Inspired by [Scaffold-ETH-2](https://github.com/scaffold-eth/scaffold-eth-2)
-- Built for the XRPL community
-- Uses [Bedrock](https://github.com/XRPL-Commons/Bedrock) for smart contract development
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
