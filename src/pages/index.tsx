@@ -15,6 +15,8 @@ import { useEffect, useState } from "react";
 
 const inter = Inter({ subsets: ["latin"] });
 
+// This page will be redirected by middleware, but we keep this component
+// just in case it's accessed before middleware processes it
 export default function Home() {
   const [enableJwt, setEnableJwt] = useState<boolean>(false);
   const [isMobile, setIsMobile] = useState<boolean>(false);

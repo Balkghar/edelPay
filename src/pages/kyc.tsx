@@ -3,8 +3,9 @@ import WalletHeader from "@/components/WalletHeader";
 import { useWalletContext } from "@/contexts/WalletContext";
 import { Inter } from "next/font/google";
 import Image from "next/image";
+import { useRouter } from "next/router";
 import QRCode from "qrcode";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -22,13 +23,21 @@ interface VerificationData {
 }
 
 export default function KYC() {
-  const { setKycCompleted } = useWalletContext();
+  const router = useRouter();
+  const { setKycCompleted, kycCompleted } = useWalletContext();
   const [isLoading, setIsLoading] = useState(false);
   const [verificationId, setVerificationId] = useState<string | null>(null);
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
   const [qrCodeImage, setQrCodeImage] = useState<string>("");
   const [verificationData, setVerificationData] = useState<VerificationData | null>(null);
   const [error, setError] = useState<string>("");
+
+  // If already onboarded, redirect to dashboard
+  useEffect(() => {
+    if (kycCompleted) {
+      router.push("/dashboard");
+    }
+  }, [kycCompleted, router]);
 
   const startVerification = async () => {
     setIsLoading(true);
