@@ -34,9 +34,9 @@ npm run dev
 ```
 
 Expected output:
-`Backend running on http://localhost:3000`
+`Backend running on http://localhost:8090`
 
-Server listens on port 3000.
+Server listens on port 8090.
 📡 API Endpoints
 🔹 1) Start Verification
 
