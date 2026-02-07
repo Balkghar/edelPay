@@ -4,6 +4,7 @@ import WalletHeader from "@/components/WalletHeader";
 import HelloWorldContract from "@/components/HelloWorldContract";
 import FlareAttestationLoader from "@/components/FlareAttestationLoader";
 import XRPLFlareBridgeDemo from "@/components/XRPLFlareBridgeDemo";
+import { FDCStatusReader } from "@/components/FDCStatusReader";
 import { useState, useEffect } from "react";
 import { useWalletContext } from "@/contexts/WalletContext";
 import { useRouter } from "next/router";
@@ -271,6 +272,11 @@ export default function FDCDemo() {
               console.log('Contract message updated:', message);
             }}
           />
+        </div>
+
+        {/* FDC API Status Reader */}
+        <div className="mb-8">
+          <FDCStatusReader />
         </div>
 
         {/* Current Contract State */}
