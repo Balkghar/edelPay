@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { publicClient } from '@/lib/flare';
 import { useXRPLFlareBridge } from '@/lib/xrplFlarebridge';
@@ -36,7 +36,7 @@ const HelloWorldContract: React.FC<HelloWorldContractProps> = ({ onMessageUpdate
   const { createFlareActionQR, simulateFullBridgeFlow } = useXRPLFlareBridge();
 
   // Read current message from contract
-  const readMessage = async () => {
+  const readMessage = useCallback(async () => {
     setIsReading(true);
     setError(null);
     
@@ -55,7 +55,7 @@ const HelloWorldContract: React.FC<HelloWorldContractProps> = ({ onMessageUpdate
     } finally {
       setIsReading(false);
     }
-  };
+  }, [onMessageUpdate]);
 
   // Update message using XRPL-Flare bridge
   const updateMessageViaXRPL = async () => {
@@ -157,7 +157,7 @@ const HelloWorldContract: React.FC<HelloWorldContractProps> = ({ onMessageUpdate
   // Read message on component mount
   useEffect(() => {
     readMessage();
-  }, []);
+  }, [readMessage]);
 
   return (
     <div className="bg-white rounded-lg shadow-sm border p-6">
@@ -191,7 +191,7 @@ const HelloWorldContract: React.FC<HelloWorldContractProps> = ({ onMessageUpdate
               <span className="text-blue-600">Reading from contract...</span>
             </div>
           ) : currentMessage ? (
-            <p className="text-blue-800 font-medium">"{currentMessage}"</p>
+            <p className="text-blue-800 font-medium">&quot;{currentMessage}&quot;</p>
           ) : (
             <p className="text-gray-500 italic">No message found</p>
           )}
@@ -259,7 +259,7 @@ const HelloWorldContract: React.FC<HelloWorldContractProps> = ({ onMessageUpdate
                       className="mx-auto border border-blue-200 rounded-lg"
                     />
                     <p className="text-xs text-blue-600">
-                      Message: "{newMessage}" → Contract: {CONTRACT_ADDRESS.slice(0, 8)}...
+                      Message: &quot;{newMessage}&quot; → Contract: {CONTRACT_ADDRESS.slice(0, 8)}...
                     </p>
                   </div>
                 ) : (

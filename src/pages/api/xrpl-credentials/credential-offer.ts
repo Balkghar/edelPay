@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { Client, Wallet } from "xrpl";
 import { XummSdk } from "xumm-sdk";
 
-const textToHex = (text) =>
+const textToHex = (text: string) =>
   Buffer.from(text, "utf8").toString("hex").toUpperCase();
 
 
@@ -50,7 +50,7 @@ export default async function handler(
     console.log("📤 Submitting CredentialCreate...");
     console.log(credentialCreateTx);
 
-    const result = await client.submitAndWait(credentialCreateTx, {
+    const result = await client.submitAndWait(credentialCreateTx as any, {
       wallet: issuerWallet,
       autofill: true,
     });

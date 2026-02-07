@@ -20,6 +20,24 @@ export const useXRPLPayment = () => {
   const [lastTransaction, setLastTransaction] = useState<string | null>(null);
   const { xrpAddress } = useWalletContext();
 
+  const simulatePayment = useCallback(async (paymentRequest: PaymentRequest) => {
+    // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 1000));
+    
+    // Simulate occasional failures (5% chance)
+    if (Math.random() < 0.05) {
+      throw new Error('Network error: Transaction failed to submit');
+    }
+    
+    // Log payment details for debugging
+    console.log('Simulated XRPL Payment:', {
+      from: xrpAddress,
+      to: paymentRequest.destination,
+      amount: `${paymentRequest.amount} ${paymentRequest.currency}`,
+      memo: paymentRequest.memo
+    });
+  }, [xrpAddress]);
+
   const processPayment = useCallback(async (paymentRequest: PaymentRequest): Promise<PaymentResult> => {
     if (!xrpAddress) {
       return { success: false, error: 'Wallet not connected' };
@@ -53,25 +71,8 @@ export const useXRPLPayment = () => {
     } finally {
       setIsProcessing(false);
     }
-  }, [xrpAddress]);
+  }, [xrpAddress, simulatePayment]);
 
-  const simulatePayment = async (paymentRequest: PaymentRequest) => {
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 1000));
-    
-    // Simulate occasional failures (5% chance)
-    if (Math.random() < 0.05) {
-      throw new Error('Network error: Transaction failed to submit');
-    }
-    
-    // Log payment details for debugging
-    console.log('Simulated XRPL Payment:', {
-      from: xrpAddress,
-      to: paymentRequest.destination,
-      amount: `${paymentRequest.amount} ${paymentRequest.currency}`,
-      memo: paymentRequest.memo
-    });
-  };
 
   const generateMockTransactionHash = () => {
     const chars = '0123456789ABCDEF';

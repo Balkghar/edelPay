@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import Image from 'next/image';
 
 type Props = {
   subjectAddress?: string;
@@ -54,7 +55,12 @@ export default function CredentialOfferButton({
       {qrUrl && (
         <div>
           <p>Scan with Xaman to accept the credential</p>
-          <img src={qrUrl} alt="XUMM QR" />
+          <Image 
+            src={qrUrl} 
+            alt="XUMM QR" 
+            width={200} 
+            height={200} 
+          />
         </div>
       )}
     </div>
