@@ -33,14 +33,16 @@ export default function KYC() {
     setError("");
 
     try {
-      const response = await fetch("/api/start-verification", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          verificationClaims: ["$.age_over_18", "$.given_name", "$.family_name"]
-        }),
+      const verificationPayload = {
+        "verificationClaims": ["$.age_over_18", "$.given_name", "$.family_name"]
+      };
+
+      const baseUrl = 'https://verifier.edel-id.ch';
+
+      const response = await fetch(`${baseUrl}/api/verification`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(verificationPayload)
       });
 
       if (!response.ok) {
@@ -48,15 +50,18 @@ export default function KYC() {
       }
 
       const data = await response.json();
-      setVerificationId(data.id);
-      setQrCodeUrl(data.verification_url);
+      const qrData = data.verification_url;
+      const verificationId = data.id;
+
+      setVerificationId(verificationId);
+      setQrCodeUrl(qrData);
 
       // Generate QR code image from URL
-      const qrImage = await QRCode.toDataURL(data.verification_url);
+      const qrImage = await QRCode.toDataURL(qrData);
       setQrCodeImage(qrImage);
 
-      // Start monitoring verification
-      startVerificationMonitoring(data.id);
+      // Start monitoring verification with direct SSE
+      startDirectVerificationMonitoring(verificationId, verificationPayload, baseUrl);
 
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to start verification");
@@ -64,29 +69,65 @@ export default function KYC() {
     }
   };
 
-  const startVerificationMonitoring = (id: string) => {
-    const eventSource = new EventSource(`/api/check-verification/${id}`);
+  const startDirectVerificationMonitoring = async (verificationId: string, verificationPayload: any, baseUrl: string) => {
+    try {
+      const sseResponse = await fetch(`${baseUrl}/api/verification/${verificationId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'text/event-stream'
+        },
+        body: JSON.stringify(verificationPayload)
+      });
 
-    eventSource.onmessage = (event) => {
-      try {
-        const data: VerificationData = JSON.parse(event.data);
-        setVerificationData(data);
-
-        if (data.state === "SUCCESS" || data.state === "FAILED") {
-          setIsLoading(false);
-          eventSource.close();
-        }
-      } catch (err) {
-        console.error("Error parsing SSE data:", err);
+      if (!sseResponse.ok) {
+        throw new Error(`SSE request failed: ${sseResponse.status}`);
       }
-    };
 
-    eventSource.onerror = (error) => {
-      console.error("EventSource error:", error);
-      setError("Connection error during verification");
+      const reader = sseResponse.body?.getReader();
+      if (!reader) {
+        throw new Error('Failed to get reader from SSE response');
+      }
+
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data:')) {
+            const jsonData = line.substring(5).trim();
+            if (jsonData) {
+              try {
+                const data = JSON.parse(jsonData);
+                
+                // Update verification state
+                setVerificationData({
+                  state: data.state,
+                  verifiedClaims: data.verifiedClaims
+                });
+
+                if (data.state === 'SUCCESS' || data.state === 'FAILED') {
+                  setIsLoading(false);
+                  reader.cancel();
+                  return;
+                }
+              } catch (parseErr) {
+                console.error('Error parsing SSE JSON:', parseErr);
+              }
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Direct SSE monitoring error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to monitor verification');
       setIsLoading(false);
-      eventSource.close();
-    };
+    }
   };
 
   const resetVerification = () => {
@@ -222,17 +263,29 @@ export default function KYC() {
                       ✅ Verification Successful!
                     </h3>
                     <div className="text-left space-y-2">
-                      {verificationData.verifiedClaims.map((claim, index) => (
+                      {verificationData.verifiedClaims.map((claimMap, index) => (
                         <div key={index} className="text-sm">
-                          {claim.age_over_18 && (
-                            <p><strong>Age 18+:</strong> {claim.age_over_18 === "true" ? "Verified ✅" : "Not verified ❌"}</p>
-                          )}
-                          {claim.given_name && (
-                            <p><strong>First Name:</strong> {claim.given_name}</p>
-                          )}
-                          {claim.family_name && (
-                            <p><strong>Last Name:</strong> {claim.family_name}</p>
-                          )}
+                          {Object.entries(claimMap).map(([key, value]) => {
+                            // Format the key nicely
+                            const formattedKey = key
+                              .split('_')
+                              .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                              .join(' ');
+
+                            if (key === 'age_over_18') {
+                              return (
+                                <p key={key}>
+                                  <strong>{formattedKey}:</strong> {value === "true" ? "✅" : "❌"}
+                                </p>
+                              );
+                            } else {
+                              return (
+                                <p key={key}>
+                                  <strong>{formattedKey}:</strong> {value}
+                                </p>
+                              );
+                            }
+                          })}
                         </div>
                       ))}
                     </div>
