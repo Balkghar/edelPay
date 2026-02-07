@@ -8,11 +8,12 @@ This is a template for a wallet connect app for the xrpl. It is built with next.
 
 This template supports the following wallets:
 
-- [XUMM](https://xumm.app/)  
+- [XUMM](https://xumm.app/)
 - [GEM](https://gemwallet.app/)
 - [CROSSMARK](https://crossmark.io/)
 
 ## How to use this template?
+
 > Note: This template comes with JWT authentication.
 
 To use this template, you can clone this repository and start building your app. You can also use this template to create a new starter project on xrpl!
@@ -27,8 +28,7 @@ Dont forget to also pass in a `ENC_KEY` in your `.env` file. This is the key tha
 - [ ] Integrate next-auth for authentication.
 - [ ] Make it an npm package!
 
-
-# Next.js readme 
+# Next.js readme
 
 ## Getting Started
 
@@ -58,7 +58,7 @@ This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-opti
 
 To learn more about Next.js, take a look at the following resources:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Next.js Documentation](https://nextjs.org/docs) ; learn about Next.js features and API.
 - [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
