@@ -10,8 +10,11 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWalletContext } from "@/contexts/WalletContext";
 import Image from "next/image";
+import Link from "next/link";
+import { useRouter } from "next/router";
 
 export default function WalletHeader() {
+  const router = useRouter();
   const {
     xrpAddress,
     isLoading,
@@ -29,8 +32,40 @@ export default function WalletHeader() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <div className="flex items-center">
-            <h1 className="text-xl font-bold text-gray-900">EdelPay</h1>
+          <div className="flex items-center space-x-8">
+            <Link href="/" className="text-xl font-bold text-gray-900 hover:text-blue-600">
+              EdelPay
+            </Link>
+            
+            {/* Navigation Links */}
+            {xrpAddress && (
+              <nav className="flex items-center space-x-4">
+                <Link 
+                  href="/kyc" 
+                  className={`text-sm font-medium transition-colors hover:text-blue-600 ${
+                    router.pathname === '/kyc' ? 'text-blue-600' : 'text-gray-600'
+                  }`}
+                >
+                  KYC
+                </Link>
+                <Link 
+                  href="/dashboard" 
+                  className={`text-sm font-medium transition-colors hover:text-blue-600 ${
+                    router.pathname === '/dashboard' ? 'text-blue-600' : 'text-gray-600'
+                  }`}
+                >
+                  Dashboard
+                </Link>
+                <Link 
+                  href="/payer" 
+                  className={`text-sm font-medium transition-colors hover:text-blue-600 ${
+                    router.pathname === '/payer' ? 'text-blue-600' : 'text-gray-600'
+                  }`}
+                >
+                  Payer
+                </Link>
+              </nav>
+            )}
           </div>
 
           {/* Wallet Section */}
