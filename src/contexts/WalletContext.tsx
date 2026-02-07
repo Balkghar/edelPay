@@ -4,7 +4,7 @@ import { useWallet as useWalletHook } from '@/hooks/useWallet';
 type WalletContextType = {
   xrpAddress: string;
   isLoading: boolean;
-  error: string;
+  error: string | null;
   xummQrCode: string;
   xummJumpLink: string;
   connectXUMM: () => void;

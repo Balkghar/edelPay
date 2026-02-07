@@ -4,6 +4,8 @@ import WalletHeader from "@/components/WalletHeader";
 import { useState, useEffect } from "react";
 import QRCode from "qrcode";
 import Image from "next/image";
+import { useFDCAttestation } from "@/hooks/useFDCAttestation";
+import FlareAttestationLoader from "@/components/FlareAttestationLoader";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -27,6 +29,16 @@ export default function KYC() {
   const [qrCodeImage, setQrCodeImage] = useState<string>("");
   const [verificationData, setVerificationData] = useState<VerificationData | null>(null);
   const [error, setError] = useState<string>("");
+  const [showFDCFlow, setShowFDCFlow] = useState(false);
+
+  const {
+    requestAttestation,
+    isLoading: isFDCLoading,
+    attestationId,
+    attestationData,
+    error: fdcError,
+    reset: resetFDC
+  } = useFDCAttestation();
 
   const startVerification = async () => {
     setIsLoading(true);
@@ -137,6 +149,31 @@ export default function KYC() {
     setVerificationData(null);
     setError("");
     setIsLoading(false);
+    setShowFDCFlow(false);
+    resetFDC();
+  };
+
+  const triggerFDCAttestation = async () => {
+    if (!verificationId || !verificationData?.verifiedClaims) {
+      setError('No verification data available for attestation');
+      return;
+    }
+
+    setShowFDCFlow(true);
+    const result = await requestAttestation(verificationId, verificationData.verifiedClaims);
+    
+    if (!result.success) {
+      setError(result.error || 'Failed to request FDC attestation');
+      setShowFDCFlow(false);
+    }
+  };
+
+  const getFDCStage = () => {
+    if (fdcError) return 'failed';
+    if (attestationData) return 'completed';
+    if (attestationId && isFDCLoading) return 'validating';
+    if (isFDCLoading) return 'requesting';
+    return 'requesting';
   };
 
   const getStatusColor = (state: VerificationState) => {
@@ -187,8 +224,8 @@ export default function KYC() {
                 <p className="text-gray-600 mb-4">
                   We need to verify your identity to ensure security and compliance.
                 </p>
-                <div className="text-sm text-gray-500 mb-4">
-                  <p className="font-medium">What we'll verify:</p>
+                  <div className="text-sm text-gray-500 mb-4">
+                    <p className="font-medium">What we&apos;ll verify:</p>
                   <ul className="mt-2 space-y-1">
                     <li>• Age verification (18+)</li>
                     <li>• First name</li>
@@ -289,12 +326,72 @@ export default function KYC() {
                         </div>
                       ))}
                     </div>
-                    <Button
-                      onClick={() => window.location.href = "/payer"}
-                      className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white"
-                    >
-                      Continue to Payment
-                    </Button>
+                    {!showFDCFlow && (
+                      <div className="space-y-3 mt-4">
+                        <Button
+                          onClick={triggerFDCAttestation}
+                          className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                        >
+                          🔗 Create Flare Attestation
+                        </Button>
+                        <Button
+                          onClick={() => window.location.href = "/payer"}
+                          variant="outline"
+                          className="w-full"
+                        >
+                          Skip to Payment
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {showFDCFlow && (
+                  <div className="mt-6">
+                    <FlareAttestationLoader 
+                      stage={getFDCStage()}
+                      message={fdcError || undefined}
+                    />
+                    
+                    {attestationData && (
+                      <div className="mt-4 p-4 bg-purple-50 rounded-lg">
+                        <h4 className="text-lg font-semibold text-purple-800 mb-2">
+                          🎆 Flare Attestation Complete!
+                        </h4>
+                        <p className="text-sm text-purple-600 mb-3">
+                          Your identity is now attested on the Flare Network blockchain.
+                        </p>
+                        <div className="text-xs text-gray-600 space-y-1">
+                          <p><strong>Attestation ID:</strong> <code className="bg-gray-100 px-1 rounded">{attestationId}</code></p>
+                          <p><strong>Type:</strong> Web2JSON Identity Verification</p>
+                          <p><strong>Source:</strong> Edel-ID</p>
+                        </div>
+                        <Button
+                          onClick={() => window.location.href = "/payer"}
+                          className="w-full mt-4 bg-purple-600 hover:bg-purple-700 text-white"
+                        >
+                          Continue to Payment with Attestation 🚀
+                        </Button>
+                      </div>
+                    )}
+                    
+                    {fdcError && (
+                      <div className="mt-4 space-y-3">
+                        <Button
+                          onClick={triggerFDCAttestation}
+                          className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                        >
+                          🔄 Retry Attestation
+                        </Button>
+                        <Button
+                          onClick={() => window.location.href = "/payer"}
+                          variant="outline"
+                          className="w-full"
+                        >
+                          Continue Without Attestation
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
 
