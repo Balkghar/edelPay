@@ -9,9 +9,7 @@ export default function Onboarding() {
   const router = useRouter();
 
   const handleStartKYC = () => {
-    // TODO: Redirect to KYC flow when implemented
-    console.log("Starting KYC process...");
-    // router.push("/kyc");
+    router.push("/kyc");
   };
 
   return (
