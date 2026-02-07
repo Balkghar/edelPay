@@ -1,9 +1,12 @@
 import { Button } from "@/components/ui/button";
 import WalletHeader from "@/components/WalletHeader";
+import { useWalletContext } from "@/contexts/WalletContext";
 import { Inter } from "next/font/google";
+import Head from "next/head";
 import Image from "next/image";
+import { useRouter } from "next/router";
 import QRCode from "qrcode";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -21,12 +24,21 @@ interface VerificationData {
 }
 
 export default function KYC() {
+  const router = useRouter();
+  const { setKycCompleted, kycCompleted } = useWalletContext();
   const [isLoading, setIsLoading] = useState(false);
   const [verificationId, setVerificationId] = useState<string | null>(null);
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
   const [qrCodeImage, setQrCodeImage] = useState<string>("");
   const [verificationData, setVerificationData] = useState<VerificationData | null>(null);
   const [error, setError] = useState<string>("");
+
+  // If already onboarded, redirect to dashboard
+  useEffect(() => {
+    if (kycCompleted) {
+      router.push("/dashboard");
+    }
+  }, [kycCompleted, router]);
 
   const startVerification = async () => {
     setIsLoading(true);
@@ -158,8 +170,13 @@ export default function KYC() {
   };
 
   return (
-    <div className={`min-h-screen bg-gray-50 ${inter.className}`}>
-      <WalletHeader />
+    <>
+      <Head>
+        <title>KYC Verification - EdelPay</title>
+        <meta name="description" content="Complete your KYC verification with Edel-ID" />
+      </Head>
+      <div className={`min-h-screen bg-gray-50 ${inter.className}`}>
+        <WalletHeader />
       <main className="flex flex-col items-center justify-center p-24">
         <div className="flex flex-col items-center space-y-8 max-w-md w-full">
           <div className="text-center">
@@ -290,7 +307,10 @@ export default function KYC() {
                       ))}
                     </div>
                     <Button
-                      onClick={() => window.location.href = "/payer"}
+                      onClick={() => {
+                        setKycCompleted(true);
+                        window.location.href = "/payer";
+                      }}
                       className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white"
                     >
                       Continue to Payment
@@ -321,5 +341,6 @@ export default function KYC() {
         </div>
       </main>
     </div>
+    </>
   );
 }

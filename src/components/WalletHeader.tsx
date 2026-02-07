@@ -25,6 +25,7 @@ export default function WalletHeader() {
     connectGEM,
     connectCrossmark,
     disconnect,
+    kycCompleted,
   } = useWalletContext();
 
   return (
@@ -40,14 +41,16 @@ export default function WalletHeader() {
             {/* Navigation Links */}
             {xrpAddress && (
               <nav className="flex items-center space-x-4">
-                <Link 
-                  href="/kyc" 
-                  className={`text-sm font-medium transition-colors hover:text-blue-600 ${
-                    router.pathname === '/kyc' ? 'text-blue-600' : 'text-gray-600'
-                  }`}
-                >
-                  KYC
-                </Link>
+                {!kycCompleted && (
+                  <Link 
+                    href="/kyc" 
+                    className={`text-sm font-medium transition-colors hover:text-blue-600 ${
+                      router.pathname === '/kyc' ? 'text-blue-600' : 'text-gray-600'
+                    }`}
+                  >
+                    KYC
+                  </Link>
+                )}
                 <Link 
                   href="/dashboard" 
                   className={`text-sm font-medium transition-colors hover:text-blue-600 ${

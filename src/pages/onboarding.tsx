@@ -1,7 +1,8 @@
-import { Inter } from "next/font/google";
 import { Button } from "@/components/ui/button";
-import { useRouter } from "next/router";
 import WalletHeader from "@/components/WalletHeader";
+import { Inter } from "next/font/google";
+import Head from "next/head";
+import { useRouter } from "next/router";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -13,8 +14,13 @@ export default function Onboarding() {
   };
 
   return (
-    <div className={`min-h-screen bg-gray-50 ${inter.className}`}>
-      <WalletHeader />
+    <>
+      <Head>
+        <title>Onboarding - EdelPay</title>
+        <meta name="description" content="Get started with EdelPay verification process" />
+      </Head>
+      <div className={`min-h-screen bg-gray-50 ${inter.className}`}>
+        <WalletHeader />
       <main className="flex flex-col items-center justify-center p-24">
       <div className="flex flex-col items-center space-y-8">
         <div className="text-center">
@@ -53,5 +59,6 @@ export default function Onboarding() {
       </div>
       </main>
     </div>
+    </>
   );
 }

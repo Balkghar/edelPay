@@ -1,10 +1,11 @@
-import { Inter } from "next/font/google";
 import { Button } from "@/components/ui/button";
 import WalletHeader from "@/components/WalletHeader";
-import { useState, useEffect } from "react";
 import { useWalletContext } from "@/contexts/WalletContext";
-import { useRouter } from "next/router";
 import { useXRPLPayment } from "@/hooks/useXRPLPayment";
+import { Inter } from "next/font/google";
+import Head from "next/head";
+import { useRouter } from "next/router";
+import { useEffect, useState } from "react";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -62,7 +63,7 @@ interface InstallmentPayment {
 
 export default function Dashboard() {
   const router = useRouter();
-  const { xrpAddress, isLoading: walletLoading } = useWalletContext();
+  const { xrpAddress, isLoading: walletLoading, kycCompleted } = useWalletContext();
   const { processPayment, createPaymentRequest, isProcessing } = useXRPLPayment();
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [paymentHistory, setPaymentHistory] = useState<PaymentHistory[]>([]);
@@ -72,12 +73,14 @@ export default function Dashboard() {
   const [selectedSubscription, setSelectedSubscription] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
 
-  // Redirect if wallet not connected
+  // Redirect if wallet not connected or not onboarded
   useEffect(() => {
-    if (!walletLoading && !xrpAddress) {
-      router.push('/');
+    if (!walletLoading) {
+      if (!xrpAddress || !kycCompleted) {
+        router.push('/kyc');
+      }
     }
-  }, [xrpAddress, walletLoading, router]);
+  }, [xrpAddress, kycCompleted, walletLoading, router]);
 
   // Mock data - replace with real API calls
   useEffect(() => {
@@ -392,8 +395,13 @@ export default function Dashboard() {
   }
 
   return (
-    <div className={`min-h-screen bg-gray-50 ${inter.className}`}>
-      <WalletHeader />
+    <>
+      <Head>
+        <title>Dashboard - EdelPay</title>
+        <meta name="description" content="Manage your subscriptions and payments" />
+      </Head>
+      <div className={`min-h-screen bg-gray-50 ${inter.className}`}>
+        <WalletHeader />
       
       <main className="max-w-7xl mx-auto p-6 sm:p-8">
         <div className="mb-8">
@@ -757,5 +765,6 @@ export default function Dashboard() {
         </div>
       </main>
     </div>
+    </>
   );
 }
