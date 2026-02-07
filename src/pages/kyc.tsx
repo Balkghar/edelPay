@@ -1,9 +1,9 @@
-import { Inter } from "next/font/google";
 import { Button } from "@/components/ui/button";
 import WalletHeader from "@/components/WalletHeader";
-import { useState, useEffect } from "react";
-import QRCode from "qrcode";
+import { Inter } from "next/font/google";
 import Image from "next/image";
+import QRCode from "qrcode";
+import { useState } from "react";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -188,7 +188,7 @@ export default function KYC() {
                   We need to verify your identity to ensure security and compliance.
                 </p>
                 <div className="text-sm text-gray-500 mb-4">
-                  <p className="font-medium">What we'll verify:</p>
+                  <p className="font-medium">What we&apos;ll verify:</p>
                   <ul className="mt-2 space-y-1">
                     <li>• Age verification (18+)</li>
                     <li>• First name</li>
