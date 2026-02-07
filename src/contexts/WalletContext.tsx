@@ -1,5 +1,5 @@
 import { useWallet as useWalletHook } from '@/hooks/useWallet';
-import { createContext, ReactNode, useContext } from 'react';
+import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from 'react';
 
 type WalletContextType = {
   xrpAddress: string;
@@ -12,6 +12,8 @@ type WalletContextType = {
   connectCrossmark: () => void;
   disconnect: () => void;
   isRetrieved: boolean;
+  kycCompleted: boolean;
+  setKycCompleted: (completed: boolean) => void;
 };
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
@@ -22,9 +24,21 @@ interface WalletProviderProps {
 
 export function WalletProvider({ children }: WalletProviderProps) {
   const walletState = useWalletHook(true); // Enable JWT for persistence
+  const [kycCompleted, setKycCompleted] = useState(false);
+
+  useEffect(() => {
+    // Load KYC completion status from localStorage
+    const savedStatus = localStorage.getItem('kycCompleted') === 'true';
+    setKycCompleted(savedStatus);
+  }, []);
+
+  const handleSetKycCompleted = useCallback((completed: boolean) => {
+    setKycCompleted(completed);
+    localStorage.setItem('kycCompleted', completed ? 'true' : 'false');
+  }, []);
 
   return (
-    <WalletContext.Provider value={{ ...walletState, error: walletState.error || '' }}>
+    <WalletContext.Provider value={{ ...walletState, error: walletState.error || '', kycCompleted, setKycCompleted: handleSetKycCompleted }}>
       {children}
     </WalletContext.Provider>
   );

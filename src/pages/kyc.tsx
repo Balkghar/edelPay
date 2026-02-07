@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import WalletHeader from "@/components/WalletHeader";
+import { useWalletContext } from "@/contexts/WalletContext";
 import { Inter } from "next/font/google";
 import Image from "next/image";
 import QRCode from "qrcode";
@@ -21,6 +22,7 @@ interface VerificationData {
 }
 
 export default function KYC() {
+  const { setKycCompleted } = useWalletContext();
   const [isLoading, setIsLoading] = useState(false);
   const [verificationId, setVerificationId] = useState<string | null>(null);
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
@@ -290,7 +292,10 @@ export default function KYC() {
                       ))}
                     </div>
                     <Button
-                      onClick={() => window.location.href = "/payer"}
+                      onClick={() => {
+                        setKycCompleted(true);
+                        window.location.href = "/payer";
+                      }}
                       className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white"
                     >
                       Continue to Payment
