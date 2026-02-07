@@ -14,6 +14,7 @@ type WalletContextType = {
   isRetrieved: boolean;
   kycCompleted: boolean;
   setKycCompleted: (completed: boolean) => void;
+  isContextLoaded: boolean;
 };
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
@@ -25,11 +26,13 @@ interface WalletProviderProps {
 export function WalletProvider({ children }: WalletProviderProps) {
   const walletState = useWalletHook(true); // Enable JWT for persistence
   const [kycCompleted, setKycCompleted] = useState(false);
+  const [isContextLoaded, setIsContextLoaded] = useState(false);
 
   useEffect(() => {
     // Load KYC completion status from localStorage
     const savedStatus = localStorage.getItem('kycCompleted') === 'true';
     setKycCompleted(savedStatus);
+    setIsContextLoaded(true);
   }, []);
 
   const handleSetKycCompleted = useCallback((completed: boolean) => {
@@ -38,7 +41,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
   }, []);
 
   return (
-    <WalletContext.Provider value={{ ...walletState, error: walletState.error || '', kycCompleted, setKycCompleted: handleSetKycCompleted }}>
+    <WalletContext.Provider value={{ ...walletState, error: walletState.error || '', kycCompleted, setKycCompleted: handleSetKycCompleted, isContextLoaded }}>
       {children}
     </WalletContext.Provider>
   );

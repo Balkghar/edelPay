@@ -19,7 +19,7 @@ const inter = Inter({ subsets: ["latin"] });
 
 export default function Home() {
   const router = useRouter();
-  const { xrpAddress: contextXrpAddress, kycCompleted } = useWalletContext();
+  const { xrpAddress: contextXrpAddress, kycCompleted, isContextLoaded } = useWalletContext();
   const [enableJwt, setEnableJwt] = useState<boolean>(false);
   const [isMobile, setIsMobile] = useState<boolean>(false);
 
@@ -38,14 +38,14 @@ export default function Home() {
 
   // Redirect logic: if wallet is connected, go to KYC or Dashboard
   useEffect(() => {
-    if (contextXrpAddress) {
+    if (isContextLoaded && contextXrpAddress) {
       if (kycCompleted) {
         router.push("/dashboard");
       } else {
         router.push("/kyc");
       }
     }
-  }, [contextXrpAddress, kycCompleted, router]);
+  }, [contextXrpAddress, kycCompleted, isContextLoaded, router]);
 
   useEffect(() => {
     const checkMobile = () => {
