@@ -2,14 +2,9 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { Client, Wallet } from "xrpl";
 import { XummSdk } from "xumm-sdk";
 
-const textToHex = (text: string) =>
-  Buffer.from(text, "utf8").toString("hex").toUpperCase();
+const textToHex = (text: string) => Buffer.from(text, "utf8").toString("hex").toUpperCase();
 
-
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   let client: Client | null = null;
 
   try {
@@ -22,11 +17,7 @@ export default async function handler(
       return res.status(400).json({ error: "subjectAddress required" });
     }
 
-    if (
-      !process.env.ISSUER_SECRET ||
-      !process.env.XUMM_KEY ||
-      !process.env.XUMM_KEY_SECRET
-    ) {
+    if (!process.env.ISSUER_SECRET || !process.env.XUMM_KEY || !process.env.XUMM_KEY_SECRET) {
       return res.status(500).json({ error: "Server env missing" });
     }
 
@@ -55,31 +46,25 @@ export default async function handler(
       autofill: true,
     });
 
-    const txResult = result.result?.meta?.TransactionResult;
+    const meta = result.result?.meta;
+    const txResult = meta && typeof meta !== "string" ? meta.TransactionResult : undefined;
 
     if (txResult !== "tesSUCCESS") {
       throw new Error("CredentialCreate failed");
     }
 
-    const xumm = new XummSdk(
-      process.env.XUMM_KEY,
-      process.env.XUMM_KEY_SECRET
-    );
+    const xumm = new XummSdk(process.env.XUMM_KEY, process.env.XUMM_KEY_SECRET);
 
     const tempCredentialAcceptTx = {
-      TransactionType: 'CredentialAccept',
+      TransactionType: "CredentialAccept",
       Account: subjectAddress,
       Issuer: issuerAddress,
       CredentialType: textToHex("KYCLVL2"),
     };
 
-    const payload = await xumm.payload.create(
-      { txjson: tempCredentialAcceptTx as any },
-      true
-    );
+    const payload = await xumm.payload.create({ txjson: tempCredentialAcceptTx as any }, true);
 
     return res.status(200).json({ payload });
-
   } catch (err: any) {
     console.error("credential-offer error:", err);
     return res.status(500).json({ error: err.message });
