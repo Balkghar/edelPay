@@ -1,21 +1,25 @@
-import Image from "next/image";
-import { Inter } from "next/font/google";
 import { Button } from "@/components/ui/button";
 import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
+    Drawer,
+    DrawerContent,
+    DrawerDescription,
+    DrawerHeader,
+    DrawerTitle,
+    DrawerTrigger,
 } from "@/components/ui/drawer";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useWalletContext } from "@/contexts/WalletContext";
 import { useWallet } from "@/hooks/useWallet";
-import { useState, useEffect } from "react";
+import { Inter } from "next/font/google";
+import Image from "next/image";
+import { useRouter } from "next/router";
+import { useEffect, useState } from "react";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export default function Home() {
+  const router = useRouter();
+  const { xrpAddress: contextXrpAddress, kycCompleted } = useWalletContext();
   const [enableJwt, setEnableJwt] = useState<boolean>(false);
   const [isMobile, setIsMobile] = useState<boolean>(false);
 
@@ -31,6 +35,17 @@ export default function Home() {
     disconnect,
     isRetrieved,
   } = useWallet(enableJwt);
+
+  // Redirect logic: if wallet is connected, go to KYC or Dashboard
+  useEffect(() => {
+    if (contextXrpAddress) {
+      if (kycCompleted) {
+        router.push("/dashboard");
+      } else {
+        router.push("/kyc");
+      }
+    }
+  }, [contextXrpAddress, kycCompleted, router]);
 
   useEffect(() => {
     const checkMobile = () => {
