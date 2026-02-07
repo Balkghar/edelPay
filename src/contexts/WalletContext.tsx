@@ -1,5 +1,5 @@
-import React, { createContext, useContext, ReactNode } from 'react';
 import { useWallet as useWalletHook } from '@/hooks/useWallet';
+import { createContext, ReactNode, useContext } from 'react';
 
 type WalletContextType = {
   xrpAddress: string;
@@ -24,7 +24,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
   const walletState = useWalletHook(true); // Enable JWT for persistence
 
   return (
-    <WalletContext.Provider value={walletState}>
+    <WalletContext.Provider value={{ ...walletState, error: walletState.error || '' }}>
       {children}
     </WalletContext.Provider>
   );
