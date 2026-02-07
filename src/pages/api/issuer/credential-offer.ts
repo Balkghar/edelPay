@@ -28,8 +28,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // 2️⃣ créer le payload XUMM
     const xumm = new XummSdk(process.env.XUMM_KEY, process.env.XUMM_KEY_SECRET);
 
-    // Pass the transaction directly, not wrapped in an object
-    const payload = await xumm.payload.create(txjson, true);
+    // Create payload with txjson wrapper as per XUMM SDK documentation
+    // Use 'as any' for custom transaction types not yet in SDK type definitions
+    const payload = await xumm.payload.create(
+      {
+        txjson: txjson as any,
+      },
+      true
+    );
 
     // 3️⃣ renvoyer le payload
     return res.status(200).json({ payload });
