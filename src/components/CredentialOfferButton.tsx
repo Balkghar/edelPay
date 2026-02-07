@@ -1,33 +1,41 @@
 import React, { useState } from "react";
 
 type Props = {
-  subjectAddress?: string; // optional, fallback to connected address if you provide one
+  subjectAddress?: string;
   label?: string;
 };
 
-export default function CredentialOfferButton({ subjectAddress, label = "Offer Credential" }: Props) {
+export default function CredentialOfferButton({
+                                                subjectAddress,
+                                                label = "Get KYC Credential",
+                                              }: Props) {
   const [qrUrl, setQrUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-
   const handleOffer = async () => {
-    setError(null);
     setLoading(true);
+    setError(null);
 
     try {
-      if (!subjectAddress) throw new Error("subjectAddress missing");
+      if (!subjectAddress) {
+        throw new Error("subjectAddress missing");
+      }
 
-      const resp = await fetch("/api/issuer/credential-offer", {
+      const resp = await fetch("/api/xrpl-credentials/credential-offer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ subjectAddress }),
       });
 
-      const data = await resp.json();
-      if (!resp.ok) throw new Error(data.error || "Server error");
+      if (!resp.ok) {
+        const txt = await resp.text();
+        throw new Error(txt);
+      }
 
+      const data = await resp.json();
       setQrUrl(data.payload.refs.qr_png);
+
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -37,16 +45,16 @@ export default function CredentialOfferButton({ subjectAddress, label = "Offer C
 
   return (
     <div>
-      <button onClick={handleOffer} disabled={loading} className="primary-button">
+      <button onClick={handleOffer} disabled={loading}>
         {loading ? "Preparing..." : label}
       </button>
 
-      {error && <div className="error-message">{error}</div>}
+      {error && <div style={{ color: "red" }}>{error}</div>}
 
       {qrUrl && (
-        <div className="qr-code-container">
-          <p>Scan this Xumm QR to accept the credential offer:</p>
-          <img src={qrUrl} alt="Credential offer QR" />
+        <div>
+          <p>Scan with Xaman to accept the credential</p>
+          <img src={qrUrl} alt="XUMM QR" />
         </div>
       )}
     </div>
