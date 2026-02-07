@@ -10,6 +10,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWallet } from "@/hooks/useWallet";
 import { Inter } from "next/font/google";
+import Head from "next/head";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 
@@ -44,10 +45,15 @@ export default function Home() {
   }, []);
 
   return (
-    <main
-      className={`flex min-h-screen flex-col items-center justify-between p-24 ${inter.className}`}
-    >
-      <div className="flex flex-col items-center">
+    <>
+      <Head>
+        <title>Home - EdelPay</title>
+        <meta name="description" content="Welcome to EdelPay - Secure payment platform with XRPL wallet integration" />
+      </Head>
+      <main
+        className={`flex min-h-screen flex-col items-center justify-between p-24 ${inter.className}`}
+      >
+        <div className="flex flex-col items-center">
         <h1 className="text-4xl font-bold text-center">
           Welcome to XRPL wallet connect template!
         </h1>
@@ -193,5 +199,6 @@ export default function Home() {
       </div>
 
     </main>
+    </>
   );
 }

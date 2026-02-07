@@ -3,6 +3,7 @@ import WalletHeader from "@/components/WalletHeader";
 import { useWalletContext } from "@/contexts/WalletContext";
 import { useXRPLPayment } from "@/hooks/useXRPLPayment";
 import { Inter } from "next/font/google";
+import Head from "next/head";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 
@@ -394,8 +395,13 @@ export default function Dashboard() {
   }
 
   return (
-    <div className={`min-h-screen bg-gray-50 ${inter.className}`}>
-      <WalletHeader />
+    <>
+      <Head>
+        <title>Dashboard - EdelPay</title>
+        <meta name="description" content="Manage your subscriptions and payments" />
+      </Head>
+      <div className={`min-h-screen bg-gray-50 ${inter.className}`}>
+        <WalletHeader />
       
       <main className="max-w-7xl mx-auto p-6 sm:p-8">
         <div className="mb-8">
@@ -759,5 +765,6 @@ export default function Dashboard() {
         </div>
       </main>
     </div>
+    </>
   );
 }

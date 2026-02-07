@@ -1,12 +1,18 @@
-import { Inter } from "next/font/google";
 import WalletHeader from "@/components/WalletHeader";
+import { Inter } from "next/font/google";
+import Head from "next/head";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export default function Seller() {
   return (
-    <div className={`min-h-screen bg-gray-50 ${inter.className}`}>
-      <WalletHeader />
+    <>
+      <Head>
+        <title>Seller - EdelPay</title>
+        <meta name="description" content="Seller dashboard for EdelPay" />
+      </Head>
+      <div className={`min-h-screen bg-gray-50 ${inter.className}`}>
+        <WalletHeader />
       <main className="flex flex-col items-center justify-center p-24">
         <div className="flex flex-col items-center space-y-8">
           <div className="text-center">
@@ -20,5 +26,6 @@ export default function Seller() {
         </div>
       </main>
     </div>
+    </>
   );
 }

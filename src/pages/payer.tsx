@@ -1,10 +1,11 @@
 // typescript
-import { Inter } from "next/font/google";
+import CredentialOfferButton from "@/components/CredentialOfferButton";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
 import WalletHeader from "@/components/WalletHeader";
 import { useWalletContext } from "@/contexts/WalletContext";
-import CredentialOfferButton from "@/components/CredentialOfferButton";
+import { Inter } from "next/font/google";
+import Head from "next/head";
+import { useState } from "react";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -22,8 +23,13 @@ export default function Payer() {
   };
 
   return (
-    <div className={`min-h-screen bg-gray-50 ${inter.className}`}>
-      <WalletHeader />
+    <>
+      <Head>
+        <title>Payer - EdelPay</title>
+        <meta name="description" content="Make payments on EdelPay" />
+      </Head>
+      <div className={`min-h-screen bg-gray-50 ${inter.className}`}>
+        <WalletHeader />
       <main className="flex flex-col items-center justify-center p-24">
         <div className="flex flex-col items-center space-y-8 max-w-md w-full">
           <div className="text-center">
@@ -108,5 +114,6 @@ export default function Payer() {
         </div>
       </main>
     </div>
+    </>
   );
 }

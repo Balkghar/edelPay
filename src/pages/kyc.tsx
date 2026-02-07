@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import WalletHeader from "@/components/WalletHeader";
 import { useWalletContext } from "@/contexts/WalletContext";
 import { Inter } from "next/font/google";
+import Head from "next/head";
 import Image from "next/image";
 import { useRouter } from "next/router";
 import QRCode from "qrcode";
@@ -169,8 +170,13 @@ export default function KYC() {
   };
 
   return (
-    <div className={`min-h-screen bg-gray-50 ${inter.className}`}>
-      <WalletHeader />
+    <>
+      <Head>
+        <title>KYC Verification - EdelPay</title>
+        <meta name="description" content="Complete your KYC verification with Edel-ID" />
+      </Head>
+      <div className={`min-h-screen bg-gray-50 ${inter.className}`}>
+        <WalletHeader />
       <main className="flex flex-col items-center justify-center p-24">
         <div className="flex flex-col items-center space-y-8 max-w-md w-full">
           <div className="text-center">
@@ -335,5 +341,6 @@ export default function KYC() {
         </div>
       </main>
     </div>
+    </>
   );
 }
