@@ -294,6 +294,42 @@ export default function BuyerDashboard() {
     }
   };
 
+  const handleRetrieveCollateral = async () => {
+    if (!paymentPlan) return;
+    
+    setIsLoading(true);
+    setErrorMessage("");
+    
+    try {
+      const collateralAmount = (product.xrpPrice * 1000000).toString(); // Convert to drops
+
+      const response = await fetch("/api/flare/retrieve-full-instructions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          payerAddress: BUYER_ADDRESS,
+          collateralAmount,
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to retrieve collateral");
+      }
+
+      // Sign and submit the transaction
+      const txHash = await signAndSubmitTransaction(data.txJson);
+      alert(`Collateral retrieved successfully! TX: ${txHash.substring(0, 12)}...`);
+      
+    } catch (error) {
+      console.error("Failed to retrieve collateral:", error);
+      setErrorMessage(error instanceof Error ? error.message : "Failed to retrieve collateral");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const formatXRP = (amount: number) => `${amount.toFixed(3)} XRP`;
   const formatDate = (date: Date) => date.toLocaleDateString();
 
@@ -540,9 +576,16 @@ export default function BuyerDashboard() {
                 {paymentPlan.currentPayment > paymentPlan.duration && (
                   <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-6">
                     <h3 className="font-semibold text-green-800 mb-2">🎉 Congratulations!</h3>
-                    <p className="text-green-700">
+                    <p className="text-green-700 mb-4">
                       Your Mac Mini Pro is fully paid! Your device will be shipped to your verified address.
                     </p>
+                    <Button
+                      onClick={handleRetrieveCollateral}
+                      disabled={isLoading}
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      {isLoading ? "Processing..." : "Retrieve Collateral"}
+                    </Button>
                   </div>
                 )}
               </div>

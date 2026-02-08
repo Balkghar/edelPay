@@ -234,7 +234,7 @@ export default function SellerDashboard() {
           <div className="bg-white rounded-lg shadow-lg">
             <div className="px-6 py-4 border-b border-gray-200">
               <h2 className="text-xl font-bold text-gray-900">Customer Payment Tracking</h2>
-              <p className="text-gray-600">Monitor your customers' payment schedules and status</p>
+              <p className="text-gray-600">Monitor your customers&apos; payment schedules and status</p>
             </div>
 
             <div className="overflow-x-auto">

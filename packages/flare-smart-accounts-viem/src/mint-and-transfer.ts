@@ -95,7 +95,7 @@ async function sendMintPayment({
 
   const mintTransaction = await sendXrplPayment({
     destination: paymentAddress,
-    amount: dropsToXrp(valueUBA + feeUBA),
+    amount: dropsToXrp((valueUBA + feeUBA).toString()),
     memos: [{ Memo: { MemoData: paymentReference.slice(2) } }],
     wallet: xrplWallet,
     client: xrplClient,

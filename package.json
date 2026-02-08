@@ -11,6 +11,8 @@
   "dependencies": {
     "@crossmarkio/sdk": "^0.3.7",
     "@flarenetwork/flare-periphery-contract-artifacts": "^0.1.40",
+    "@flarenetwork/flare-wagmi-periphery-package": "^2.1.0",
+    "@flarenetwork/smart-accounts-encoder": "^0.0.8",
     "@gemwallet/api": "^3.7.0",
     "@radix-ui/react-dialog": "^1.0.5",
     "@radix-ui/react-slot": "^1.0.2",

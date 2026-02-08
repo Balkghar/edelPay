@@ -415,7 +415,7 @@ export default function Seller() {
               
               {products.length === 0 && (
                 <div className="text-center text-gray-500 py-8">
-                  No products added yet. Click "Add Product" to get started.
+                  No products added yet. Click &quot;Add Product&quot; to get started.
                 </div>
               )}
             </div>
