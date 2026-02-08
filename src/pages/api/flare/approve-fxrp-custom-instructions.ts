@@ -11,8 +11,7 @@ import { publicClient } from "../../../../packages/flare-smart-accounts-viem/src
 import { abi as instructionsAbi } from "../../../../packages/flare-smart-accounts-viem/src/abis/CustomInstructionsFacet";
 import { MASTER_ACCOUNT_CONTROLLER_ADDRESS } from "../../../../packages/flare-smart-accounts-viem/src/utils/smart-accounts";
 import { toHex } from "viem";
-import { Client, Wallet, xrpToDrops } from "xrpl";
-import { sendCustomInstruction } from "../../../../packages/flare-smart-accounts-viem/src/custom-instructions";
+import { xrpToDrops } from "xrpl";
 
 async function encodeCustomInstruction(instructions: CustomInstruction[], walletId: number) {
   const encoded = (await publicClient.readContract({
@@ -43,7 +42,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const walletId = 0;
     const payerXrplAddress = req.body.payerAddress as string;
 
-    const payerPersonalFlareAddress = await getPersonalAccountAddress(payerXrplAddress);
+    console.log(`🔄 Processing FXRP approval for: ${payerXrplAddress}`);
+
+    const payerPersonalFlareAddress = await getPersonalAccountAddress(
+      payerXrplAddress
+    );
+
+    console.log(`✅ Personal account address: ${payerPersonalFlareAddress}`);
 
     const approveAmount = 10000000;
 
@@ -59,20 +64,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       },
     ] as CustomInstruction[];
 
+    console.log(`📝 Custom instructions created`);
+
     await registerCustomInstruction(customInstructions);
     const encodedInstruction = await encodeCustomInstruction(customInstructions, walletId);
 
-
-    let xrplClient = new Client("wss://s.altnet.rippletest.net:51233");
-    const xrplWallet = Wallet.fromSeed(process.env.ISSUER_SEED!);
-    await sendCustomInstruction({
-      encodedInstruction,
-      xrplClient,
-      xrplWallet,
-    });
+    console.log(`✅ Encoded instruction: ${encodedInstruction}`);
 
     const operatorXrplAddress = (await getOperatorXrplAddresses())[0];
     const instructionFee = await getInstructionFee(encodedInstruction);
+
+    console.log(`💰 Instruction fee: ${instructionFee} XRP`);
 
     const txJson = {
       TransactionType: "Payment",
@@ -88,9 +90,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ],
     };
 
-    return res.status(200).json({ txJson });
+    console.log(`✅ Transaction JSON prepared for signature`);
+
+    return res.status(200).json({ 
+      txJson,
+      message: "FXRP approval transaction ready for signing"
+    });
   } catch (err: any) {
-    console.error(err);
-    return res.status(500).json({ error: err.message });
+    console.error(`❌ Error in approve-fxrp-custom-instructions:`, err);
+    return res.status(500).json({ 
+      error: err.message || "Failed to create FXRP approval transaction",
+      details: err.toString()
+    });
   }
 }

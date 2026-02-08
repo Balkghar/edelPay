@@ -227,7 +227,7 @@ export default function KYC() {
     }
   };
 
-  // ✅ Create FXRP Approval QR
+  // ✅ Create FXRP Approval QR directly from approve-fxrp-custom-instructions
   const createFxrpApprovalQr = async () => {
     setFxrpApprovalError("");
 
@@ -244,26 +244,45 @@ export default function KYC() {
     setFxrpApprovalLoading(true);
 
     try {
-      console.log(`💰 Creating FXRP approval QR for ${selectedRole} address: ${xrpAddress}`);
+      console.log(`💰 Creating FXRP approval for ${selectedRole} address: ${xrpAddress}`);
       
-      const resp = await fetch("/api/flare/create-fxrp-approval-qr", {
+      // Step 1: Get the transaction JSON from approve-fxrp-custom-instructions
+      const approvalResp = await fetch("/api/flare/approve-fxrp-custom-instructions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ payerAddress: xrpAddress }),
       });
 
-      if (!resp.ok) {
-        const txt = await resp.text();
-        throw new Error(txt);
+      if (!approvalResp.ok) {
+        const txt = await approvalResp.text();
+        throw new Error(`Approval transaction failed: ${txt}`);
       }
 
-      const data = await resp.json();
+      const approvalData = await approvalResp.json();
       
-      // Set the real XUMM QR code URL and deep link
-      setFxrpApprovalQrUrl(data.qrUrl);
-      setFxrpApprovalDeepLink(data.deepLink);
+      // Step 2: Create XUMM payload with the transaction
+      if (!process.env.NEXT_PUBLIC_XUMM_API_KEY) {
+        throw new Error("XUMM API key not configured");
+      }
+
+      const xummPayloadResp = await fetch("/api/xumm/create-custom-payload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ txJson: approvalData.txJson }),
+      });
+
+      if (!xummPayloadResp.ok) {
+        const txt = await xummPayloadResp.text();
+        throw new Error(`XUMM payload creation failed: ${txt}`);
+      }
+
+      const xummPayload = await xummPayloadResp.json();
       
-      console.log(`📱 FXRP approval QR created with payload UUID: ${data.payloadUuid}`);
+      // Set the XUMM QR code URL and deep link
+      setFxrpApprovalQrUrl(xummPayload.payload.refs.qr_png);
+      setFxrpApprovalDeepLink(xummPayload.payload.next.always);
+      
+      console.log(`📱 FXRP approval QR created with payload UUID: ${xummPayload.payload.uuid}`);
       
       // In a real implementation, you'd poll the XUMM payload status
       // For demo purposes, we'll simulate completion after 10 seconds
