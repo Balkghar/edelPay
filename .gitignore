@@ -39,3 +39,11 @@ next-env.d.ts
 .env
 
 pnpm-lock.yaml
+
+packages/*/node_modules
+packages/*/cache
+packages/*/artifacts
+packages/*/deployments
+packages/*/typechain-types
+packages/*/.env
+packages/*/.DS_Store
