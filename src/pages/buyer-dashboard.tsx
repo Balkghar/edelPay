@@ -5,9 +5,13 @@ import { Inter } from "next/font/google";
 import Head from "next/head";
 import Image from "next/image";
 import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
 const inter = Inter({ subsets: ["latin"] });
+
+// Constants for buyer and seller addresses
+const BUYER_ADDRESS = "rLa93iQHbSnrhcR2idkwyd9NuCWYHdpvGG";
+const SELLER_ADDRESS = "rULYG4YWzhN4LFrEidQs9swo4fKyWmrcVP";
 
 interface PaymentPlan {
   totalPrice: number;
@@ -31,6 +35,14 @@ export default function BuyerDashboard() {
   const { kycCompleted, isContextLoaded, xrpAddress } = useWalletContext();
   const [isLoading, setIsLoading] = useState(false);
   const [paymentPlan, setPaymentPlan] = useState<PaymentPlan | null>(null);
+  const [initializationStep, setInitializationStep] = useState<number>(0);
+  const [initializationStatus, setInitializationStatus] = useState<string>("");
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string>("");
+  const [xummQrCode, setXummQrCode] = useState<string>("");
+  const [xummJumpLink, setXummJumpLink] = useState<string>("");
+  const [currentPayloadId, setCurrentPayloadId] = useState<string>("");
+  const wsRef = useRef<WebSocket | null>(null);
 
   // Redirect if not KYC completed
   useEffect(() => {
@@ -38,6 +50,15 @@ export default function BuyerDashboard() {
       router.push("/kyc-buyer");
     }
   }, [kycCompleted, router, isContextLoaded]);
+
+  // Cleanup WebSocket on unmount
+  useEffect(() => {
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+    };
+  }, []);
 
   // Sample Mac Mini Pro product data
   const product = {
@@ -57,11 +78,166 @@ export default function BuyerDashboard() {
     ],
   };
 
-  const handlePurchase = async () => {
-    setIsLoading(true);
+  // Helper function to sign and submit transaction with XUMM
+  const signAndSubmitTransaction = async (txJson: any): Promise<string> => {
+    return new Promise(async (resolve, reject) => {
+      try {
+        // Create XUMM payload
+        const payloadResponse = await fetch("/api/xumm/create-custom-payload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ txJson }),
+        });
+
+        const payloadData = await payloadResponse.json();
+        
+        if (!payloadResponse.ok || payloadData.error) {
+          throw new Error(payloadData.error || "Failed to create XUMM payload");
+        }
+
+        const qrCode = payloadData.payload.refs.qr_png;
+        const jumpLink = payloadData.payload.next.always;
+        const payloadId = payloadData.payload.uuid;
+
+        setXummQrCode(qrCode);
+        setXummJumpLink(jumpLink);
+        setCurrentPayloadId(payloadId);
+
+        // Open in new tab on mobile
+        if (window.innerWidth < 768) {
+          window.open(jumpLink, "_blank");
+        }
+
+        // Set up WebSocket connection
+        const ws = new WebSocket(payloadData.payload.refs.websocket_status);
+        wsRef.current = ws;
+
+        ws.onmessage = async (e) => {
+          try {
+            const responseObj = JSON.parse(e.data);
+            if (responseObj.signed) {
+              const statusResponse = await fetch(
+                `/api/xumm/get-payload-status?payloadId=${payloadId}`
+              );
+              const statusData = await statusResponse.json();
+
+              if (statusData.error) {
+                throw new Error(statusData.error);
+              }
+
+              const txHash = statusData.status.response.txid;
+              setXummQrCode("");
+              setXummJumpLink("");
+              ws.close();
+              resolve(txHash);
+            } else if (responseObj.signed === false) {
+              setXummQrCode("");
+              setXummJumpLink("");
+              ws.close();
+              reject(new Error("Transaction was rejected by user"));
+            }
+          } catch (err) {
+            setXummQrCode("");
+            setXummJumpLink("");
+            ws.close();
+            reject(err instanceof Error ? err : new Error("Failed to verify signature"));
+          }
+        };
+
+        ws.onerror = () => {
+          setXummQrCode("");
+          setXummJumpLink("");
+          reject(new Error("WebSocket connection error"));
+        };
+
+        ws.onclose = () => {
+          wsRef.current = null;
+        };
+      } catch (err) {
+        reject(err instanceof Error ? err : new Error("Failed to create XUMM payload"));
+      }
+    });
+  };
+
+  // Step 1: Add vendor-payer mapping
+  const addVendorPayerMapping = async () => {
+    setInitializationStep(1);
+    setInitializationStatus("Adding vendor-payer mapping...");
     
     try {
-      // Simulate creating a payment plan
+      const response = await fetch("/api/flare/add-mapping-vendor-instructions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          vendorAddress: SELLER_ADDRESS,
+          payerAddress: BUYER_ADDRESS,
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to add vendor-payer mapping");
+      }
+
+      setInitializationStatus("Vendor-payer mapping completed ✓");
+      return true;
+    } catch (error) {
+      console.error("Failed to add mapping:", error);
+      setErrorMessage(error instanceof Error ? error.message : "Failed to add mapping");
+      throw error;
+    }
+  };
+
+  // Step 2: Deposit collateral
+  const depositCollateral = async (amount: string) => {
+    setInitializationStep(2);
+    setInitializationStatus("Depositing collateral...");
+    
+    try {
+      const response = await fetch("/api/flare/deposit-custom-instructions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          collateralAmount: amount,
+          addressVendor: SELLER_ADDRESS,
+          payerAddress: BUYER_ADDRESS,
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to deposit collateral");
+      }
+
+      // Sign and submit the transaction
+      const txHash = await signAndSubmitTransaction(data.txJson);
+      setInitializationStatus(`Collateral deposit completed ✓ (TX: ${txHash.substring(0, 8)}...)`);
+      return true;
+    } catch (error) {
+      console.error("Failed to deposit collateral:", error);
+      setErrorMessage(error instanceof Error ? error.message : "Failed to deposit collateral");
+      throw error;
+    }
+  };
+
+  const handlePurchase = async () => {
+    setIsLoading(true);
+    setErrorMessage("");
+    
+    try {
+      // Calculate collateral amount in FXRP (assuming 1:1 with XRP for now)
+      // For 0.3 XRP total, we might deposit the full amount or a portion
+      const collateralAmount = (product.xrpPrice * 1000000).toString(); // Convert to drops (smallest unit)
+      
+      // Execute the two-step initialization process
+      await addVendorPayerMapping();
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Small delay between steps
+      
+      await depositCollateral(collateralAmount);
+      
+      // Once initialized, create the payment plan
       const newPaymentPlan: PaymentPlan = {
         totalPrice: 0.3,
         monthlyPayment: 0.025, // 0.3 / 12
@@ -72,15 +248,14 @@ export default function BuyerDashboard() {
       };
 
       setPaymentPlan(newPaymentPlan);
-      
-      // In a real implementation, this would:
-      // 1. Create a smart contract for the payment plan
-      // 2. Process the first payment
-      // 3. Set up automated recurring payments
-      // 4. Store the plan in a database
+      setIsInitialized(true);
+      setInitializationStep(0);
+      setInitializationStatus("Payment plan created successfully! ✓");
       
     } catch (error) {
       console.error("Purchase failed:", error);
+      setInitializationStep(0);
+      setInitializationStatus("");
     } finally {
       setIsLoading(false);
     }
@@ -138,6 +313,15 @@ export default function BuyerDashboard() {
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Buyer Dashboard</h1>
             <p className="text-gray-600">Welcome to your shopping dashboard. Purchase products with flexible XRP payment plans.</p>
+            
+            {/* Debug info for addresses */}
+            <div className="mt-4 p-3 bg-gray-100 rounded-lg text-xs">
+              <p className="text-gray-600"><span className="font-semibold">Buyer Address:</span> {BUYER_ADDRESS}</p>
+              <p className="text-gray-600"><span className="font-semibold">Seller Address:</span> {SELLER_ADDRESS}</p>
+              {xrpAddress && (
+                <p className="text-gray-600"><span className="font-semibold">Connected Wallet:</span> {xrpAddress}</p>
+              )}
+            </div>
           </div>
 
           {!paymentPlan ? (
@@ -207,6 +391,80 @@ export default function BuyerDashboard() {
                     <p className="text-sm text-red-600 mt-2 text-center">
                       Please connect your wallet to make a purchase
                     </p>
+                  )}
+
+                  {/* Initialization Progress */}
+                  {isLoading && initializationStep > 0 && (
+                    <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <h4 className="font-semibold text-blue-900 mb-2">
+                        Initializing Payment Plan
+                      </h4>
+                      <div className="space-y-2">
+                        <div className="flex items-center text-sm">
+                          <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-2 ${
+                            initializationStep > 1 ? 'bg-green-500' : initializationStep === 1 ? 'bg-blue-500' : 'bg-gray-300'
+                          }`}>
+                            {initializationStep > 1 ? '✓' : '1'}
+                          </div>
+                          <span className={initializationStep >= 1 ? 'text-blue-900' : 'text-gray-500'}>
+                            Add vendor-payer mapping
+                          </span>
+                        </div>
+                        <div className="flex items-center text-sm">
+                          <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-2 ${
+                            initializationStep > 2 ? 'bg-green-500' : initializationStep === 2 ? 'bg-blue-500' : 'bg-gray-300'
+                          }`}>
+                            {initializationStep > 2 ? '✓' : '2'}
+                          </div>
+                          <span className={initializationStep >= 2 ? 'text-blue-900' : 'text-gray-500'}>
+                            Deposit collateral
+                          </span>
+                        </div>
+                      </div>
+                      {initializationStatus && (
+                        <p className="mt-3 text-sm text-blue-700">
+                          {initializationStatus}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Error Message */}
+                  {errorMessage && (
+                    <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                      <p className="text-sm text-red-700">
+                        ❌ {errorMessage}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* XUMM QR Code */}
+                  {xummQrCode && (
+                    <div className="mt-4 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                      <h4 className="font-semibold text-purple-900 mb-3 text-center">
+                        📱 Scan with XUMM Wallet
+                      </h4>
+                      <div className="flex flex-col items-center space-y-3">
+                        <Image
+                          src={xummQrCode}
+                          alt="XUMM QR Code"
+                          width={200}
+                          height={200}
+                          className="border border-purple-300 rounded-lg"
+                        />
+                        <p className="text-sm text-purple-700 text-center">
+                          Scan this QR code with your XUMM app to sign the transaction
+                        </p>
+                        {xummJumpLink && (
+                          <button
+                            onClick={() => window.open(xummJumpLink, "_blank")}
+                            className="text-sm text-purple-600 hover:text-purple-800 underline"
+                          >
+                            Or click here to open in XUMM app
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>

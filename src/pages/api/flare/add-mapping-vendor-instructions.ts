@@ -9,21 +9,16 @@ import {
 } from "../../../../packages/flare-smart-accounts-viem/src/utils/smart-accounts";
 import { publicClient } from "../../../../packages/flare-smart-accounts-viem/src/utils/client";
 import { abi as instructionsAbi } from "../../../../packages/flare-smart-accounts-viem/src/abis/CustomInstructionsFacet";
-import { abi as vaultAbi } from "../../../../packages/flare-smart-accounts-viem/src/abis/IERC20";
-import { Client, Wallet } from "xrpl";
-
+import { abi as vaultAbi } from "../../../../packages/flare-smart-accounts-viem/src/abis/Vault";
+import { Client, Wallet, xrpToDrops } from "xrpl";
 
 import { MASTER_ACCOUNT_CONTROLLER_ADDRESS } from "../../../../packages/flare-smart-accounts-viem/src/utils/smart-accounts";
 import { toHex } from "viem";
 
-
 const textToHex = (text: string) => Buffer.from(text, "utf8").toString("hex").toUpperCase();
 
 // VA ETRE SIGNER PAR PLATFORM
-async function encodeCustomInstruction(
-  instructions: CustomInstruction[],
-  walletId: number
-) {
+async function encodeCustomInstruction(instructions: CustomInstruction[], walletId: number) {
   const encoded = (await publicClient.readContract({
     address: MASTER_ACCOUNT_CONTROLLER_ADDRESS,
     abi: instructionsAbi,
@@ -31,15 +26,10 @@ async function encodeCustomInstruction(
     args: [instructions],
   })) as `0x${string}`;
 
-  return ("0xff" +
-    toHex(walletId, { size: 1 }).slice(2) +
-    encoded.slice(6)) as `0x${string}`;
+  return ("0xff" + toHex(walletId, { size: 1 }).slice(2) + encoded.slice(6)) as `0x${string}`;
 }
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     let client: Client | null = null;
 
@@ -77,27 +67,22 @@ export default async function handler(
         data: encodeFunctionData({
           abi: vaultAbi,
           functionName: "addVendorPayer",
-          args: [
-            vendorFlareAddress as `0x${string}`,
-            payerFlareAddress as `0x${string}`
-          ],
+          args: [vendorFlareAddress as `0x${string}`, payerFlareAddress as `0x${string}`],
         }),
       },
     ] as CustomInstruction[];
 
     await registerCustomInstruction(customInstructions);
-    const encodedInstruction = await encodeCustomInstruction(
-      customInstructions,
-      walletId
-    );
+    const encodedInstruction = await encodeCustomInstruction(customInstructions, walletId);
 
     const operatorXrplAddress = (await getOperatorXrplAddresses())[0];
     const instructionFee = await getInstructionFee(encodedInstruction);
 
     const txJson = {
       TransactionType: "Payment",
+      Account: issuerWallet.address,
       Destination: operatorXrplAddress,
-      Amount: instructionFee,
+      Amount: xrpToDrops(instructionFee), // Convert XRP to drops string
       Memos: [
         {
           Memo: {
@@ -112,7 +97,11 @@ export default async function handler(
       autofill: true,
     });
 
-    if (  result.result?.meta && typeof result.result.meta !== "string" && result.result.meta.TransactionResult === "tesSUCCESS") {
+    if (
+      result.result?.meta &&
+      typeof result.result.meta !== "string" &&
+      result.result.meta.TransactionResult === "tesSUCCESS"
+    ) {
       return res.status(200).json({ message: "Transaction successful", details: result });
     } else {
       return res.status(500).json({ error: "Transaction failed", details: result });
