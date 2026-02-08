@@ -3,7 +3,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 interface StatusResponse {
   status: boolean;
   message?: string;
-  timestamp?: bigint; // Changed to bigint (uint256)
+  timestamp?: number; // Unix timestamp
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse<StatusResponse>) {
@@ -26,7 +26,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     return res.status(200).json({
       status: shouldReturnTrue,
       message: shouldReturnTrue ? "Operation successful" : "Operation failed",
-      timestamp: BigInt(Math.floor(Date.now() / 1000)), // Unix timestamp as uint32
+      timestamp: Math.floor(Date.now() / 1000), // Unix timestamp
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
