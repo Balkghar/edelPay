@@ -97,7 +97,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       TransactionType: "Payment",
       Account: payerAddress,
       Destination: operatorXrplAddress,
-      Amount: xrpToDrops(instructionFee), // Convert XRP to drops string
+      Amount: instructionFee, // Convert XRP to drops string
       Memos: [
         {
           Memo: {
