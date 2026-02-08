@@ -6,7 +6,7 @@ import Head from "next/head";
 import Image from "next/image";
 import { useRouter } from "next/router";
 import QRCode from "qrcode";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -25,13 +25,24 @@ interface VerificationData {
 
 export default function KYC() {
   const router = useRouter();
-  const { setKycCompleted, kycCompleted } = useWalletContext();
+
+  // ✅ only addition: xrpAddress (needed for credential offer)
+  const { setKycCompleted, kycCompleted, xrpAddress } = useWalletContext();
+
   const [isLoading, setIsLoading] = useState(false);
   const [verificationId, setVerificationId] = useState<string | null>(null);
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
   const [qrCodeImage, setQrCodeImage] = useState<string>("");
   const [verificationData, setVerificationData] = useState<VerificationData | null>(null);
   const [error, setError] = useState<string>("");
+
+  // ✅ Xaman / XUMM credential offer state (added)
+  const [xamanQrUrl, setXamanQrUrl] = useState<string>("");
+  const [xamanLoading, setXamanLoading] = useState(false);
+  const [xamanError, setXamanError] = useState<string>("");
+
+  // ✅ HARD LOCK to avoid loops / spam (critical)
+  const xamanTriggeredRef = useRef(false);
 
   // If already onboarded, redirect to dashboard
   useEffect(() => {
@@ -44,17 +55,23 @@ export default function KYC() {
     setIsLoading(true);
     setError("");
 
+    // reset Xaman state when starting new verification
+    setXamanQrUrl("");
+    setXamanLoading(false);
+    setXamanError("");
+    xamanTriggeredRef.current = false;
+
     try {
       const verificationPayload = {
-        "verificationClaims": ["$.age_over_18", "$.given_name", "$.family_name"]
+        verificationClaims: ["$.age_over_18", "$.given_name", "$.family_name"],
       };
 
-      const baseUrl = 'https://verifier.edel-id.ch';
+      const baseUrl = "https://verifier.edel-id.ch";
 
       const response = await fetch(`${baseUrl}/api/verification`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(verificationPayload)
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(verificationPayload),
       });
 
       if (!response.ok) {
@@ -74,22 +91,25 @@ export default function KYC() {
 
       // Start monitoring verification with direct SSE
       startDirectVerificationMonitoring(verificationId, verificationPayload, baseUrl);
-
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to start verification");
       setIsLoading(false);
     }
   };
 
-  const startDirectVerificationMonitoring = async (verificationId: string, verificationPayload: any, baseUrl: string) => {
+  const startDirectVerificationMonitoring = async (
+    verificationId: string,
+    verificationPayload: any,
+    baseUrl: string
+  ) => {
     try {
       const sseResponse = await fetch(`${baseUrl}/api/verification/${verificationId}`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'text/event-stream'
+          "Content-Type": "application/json",
+          Accept: "text/event-stream",
         },
-        body: JSON.stringify(verificationPayload)
+        body: JSON.stringify(verificationPayload),
       });
 
       if (!sseResponse.ok) {
@@ -98,7 +118,7 @@ export default function KYC() {
 
       const reader = sseResponse.body?.getReader();
       if (!reader) {
-        throw new Error('Failed to get reader from SSE response');
+        throw new Error("Failed to get reader from SSE response");
       }
 
       const decoder = new TextDecoder();
@@ -108,39 +128,86 @@ export default function KYC() {
         if (done) break;
 
         const chunk = decoder.decode(value);
-        const lines = chunk.split('\n');
+        const lines = chunk.split("\n");
 
         for (const line of lines) {
-          if (line.startsWith('data:')) {
+          if (line.startsWith("data:")) {
             const jsonData = line.substring(5).trim();
             if (jsonData) {
               try {
                 const data = JSON.parse(jsonData);
-                
+
                 // Update verification state
                 setVerificationData({
                   state: data.state,
-                  verifiedClaims: data.verifiedClaims
+                  verifiedClaims: data.verifiedClaims,
                 });
 
-                if (data.state === 'SUCCESS' || data.state === 'FAILED') {
+                if (data.state === "SUCCESS" || data.state === "FAILED") {
                   setIsLoading(false);
                   reader.cancel();
                   return;
                 }
               } catch (parseErr) {
-                console.error('Error parsing SSE JSON:', parseErr);
+                console.error("Error parsing SSE JSON:", parseErr);
               }
             }
           }
         }
       }
     } catch (err) {
-      console.error('Direct SSE monitoring error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to monitor verification');
+      console.error("Direct SSE monitoring error:", err);
+      setError(err instanceof Error ? err.message : "Failed to monitor verification");
       setIsLoading(false);
     }
   };
+
+  // ✅ Create Xaman QR (same endpoint as your CredentialOfferButton)
+  const createXamanQr = async () => {
+    setXamanError("");
+
+    if (!xrpAddress) {
+      setXamanError("Connect your wallet first (Xaman / Gem / Crossmark).");
+      return;
+    }
+
+    // HARD STOP: never create twice
+    if (xamanTriggeredRef.current) return;
+    xamanTriggeredRef.current = true;
+
+    setXamanLoading(true);
+
+    try {
+      const resp = await fetch("/api/xrpl-credentials/credential-offer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subjectAddress: xrpAddress }),
+      });
+
+      if (!resp.ok) {
+        const txt = await resp.text();
+        throw new Error(txt);
+      }
+
+      const data = await resp.json();
+      setXamanQrUrl(data.payload.refs.qr_png);
+    } catch (err: any) {
+      // allow retry if it failed
+      xamanTriggeredRef.current = false;
+      setXamanError(err?.message || "CredentialCreate failed");
+    } finally {
+      setXamanLoading(false);
+    }
+  };
+
+  // ✅ Auto trigger ONCE when SUCCESS + wallet connected
+  useEffect(() => {
+    if (verificationData?.state === "SUCCESS" && xrpAddress && !xamanTriggeredRef.current) {
+      createXamanQr();
+    }
+    // intentionally NOT depending on createXamanQr (keeps it stable)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [verificationData?.state, xrpAddress]);
 
   const resetVerification = () => {
     setVerificationId(null);
@@ -149,23 +216,37 @@ export default function KYC() {
     setVerificationData(null);
     setError("");
     setIsLoading(false);
+
+    // reset Xaman state
+    setXamanQrUrl("");
+    setXamanLoading(false);
+    setXamanError("");
+    xamanTriggeredRef.current = false;
   };
 
   const getStatusColor = (state: VerificationState) => {
     switch (state) {
-      case "PENDING": return "text-yellow-600";
-      case "SUCCESS": return "text-green-600";
-      case "FAILED": return "text-red-600";
-      default: return "text-gray-600";
+      case "PENDING":
+        return "text-yellow-600";
+      case "SUCCESS":
+        return "text-green-600";
+      case "FAILED":
+        return "text-red-600";
+      default:
+        return "text-gray-600";
     }
   };
 
   const getStatusIcon = (state: VerificationState) => {
     switch (state) {
-      case "PENDING": return "🔄";
-      case "SUCCESS": return "✅";
-      case "FAILED": return "❌";
-      default: return "⏳";
+      case "PENDING":
+        return "🔄";
+      case "SUCCESS":
+        return "✅";
+      case "FAILED":
+        return "❌";
+      default:
+        return "⏳";
     }
   };
 
@@ -177,170 +258,218 @@ export default function KYC() {
       </Head>
       <div className={`min-h-screen bg-gray-50 ${inter.className}`}>
         <WalletHeader />
-      <main className="flex flex-col items-center justify-center p-24">
-        <div className="flex flex-col items-center space-y-8 max-w-md w-full">
-          <div className="text-center">
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">
-              KYC Verification
-            </h1>
-            <p className="text-xl text-gray-600">
-              Verify your identity with Edel-ID
-            </p>
-          </div>
-
-          {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded w-full">
-              <p className="font-semibold">Error:</p>
-              <p>{error}</p>
+        <main className="flex flex-col items-center justify-center p-24">
+          <div className="flex flex-col items-center space-y-8 max-w-md w-full">
+            <div className="text-center">
+              <h1 className="text-4xl font-bold text-gray-900 mb-4">KYC Verification</h1>
+              <p className="text-xl text-gray-600">Verify your identity with Edel-ID</p>
             </div>
-          )}
 
-          {!verificationId ? (
-            <div className="bg-white p-8 rounded-lg shadow-lg border border-gray-200 w-full">
-              <div className="text-center mb-6">
-                <h2 className="text-2xl font-semibold text-gray-800 mb-2">
-                  Start Identity Verification
-                </h2>
-                <p className="text-gray-600 mb-4">
-                  We need to verify your identity to ensure security and compliance.
-                </p>
-                <div className="text-sm text-gray-500 mb-4">
-                  <p className="font-medium">What we&apos;ll verify:</p>
-                  <ul className="mt-2 space-y-1">
-                    <li>• Age verification (18+)</li>
-                    <li>• First name</li>
-                    <li>• Last name</li>
-                  </ul>
+            {error && (
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded w-full">
+                <p className="font-semibold">Error:</p>
+                <p>{error}</p>
+              </div>
+            )}
+
+            {!verificationId ? (
+              <div className="bg-white p-8 rounded-lg shadow-lg border border-gray-200 w-full">
+                <div className="text-center mb-6">
+                  <h2 className="text-2xl font-semibold text-gray-800 mb-2">Start Identity Verification</h2>
+                  <p className="text-gray-600 mb-4">
+                    We need to verify your identity to ensure security and compliance.
+                  </p>
+                  <div className="text-sm text-gray-500 mb-4">
+                    <p className="font-medium">What we&apos;ll verify:</p>
+                    <ul className="mt-2 space-y-1">
+                      <li>• Age verification (18+)</li>
+                      <li>• First name</li>
+                      <li>• Last name</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <Button
+                  onClick={startVerification}
+                  disabled={isLoading}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-8 rounded-lg text-lg transition-colors duration-200"
+                >
+                  {isLoading ? "Starting..." : "Start Verification"}
+                </Button>
+              </div>
+            ) : (
+              <div className="bg-white p-8 rounded-lg shadow-lg border border-gray-200 w-full">
+                <div className="text-center mb-6">
+                  <h2 className="text-2xl font-semibold text-gray-800 mb-4">Scan QR Code</h2>
+
+                  {verificationData && (
+                    <div
+                      className={`mb-4 p-3 rounded-lg ${
+                        verificationData.state === "SUCCESS"
+                          ? "bg-green-50"
+                          : verificationData.state === "FAILED"
+                            ? "bg-red-50"
+                            : "bg-yellow-50"
+                      }`}
+                    >
+                      <p className={`font-semibold ${getStatusColor(verificationData.state)}`}>
+                        {getStatusIcon(verificationData.state)} Status: {verificationData.state}
+                      </p>
+                    </div>
+                  )}
+
+                  {qrCodeImage && verificationData?.state !== "SUCCESS" && (
+                    <>
+                      <p className="text-gray-600 mb-4">Scan this QR code with your Edel-ID app</p>
+                      <div className="flex justify-center mb-4">
+                        <Image
+                          src={qrCodeImage}
+                          alt="QR Code for verification"
+                          width={200}
+                          height={200}
+                          className="border border-gray-200 rounded-lg"
+                        />
+                      </div>
+                      <p className="text-sm text-gray-500 mb-4">Or click the link below on your mobile device</p>
+                      <a
+                        href={qrCodeUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-block bg-blue-100 text-blue-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-200 transition-colors"
+                      >
+                        Open Verification Link
+                      </a>
+                    </>
+                  )}
+
+                  {isLoading && verificationData?.state === "PENDING" && (
+                    <div className="mt-4">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                      <p className="text-gray-600">
+                        Waiting for verification... Please complete the process in your Edel-ID app.
+                      </p>
+                    </div>
+                  )}
+
+                  {verificationData?.state === "SUCCESS" && verificationData.verifiedClaims && (
+                    <div className="mt-6 p-4 bg-green-50 rounded-lg">
+                      <h3 className="text-lg font-semibold text-green-800 mb-3">
+                        ✅ Verification Successful!
+                      </h3>
+                      <div className="text-left space-y-2">
+                        {verificationData.verifiedClaims.map((claimMap, index) => (
+                          <div key={index} className="text-sm">
+                            {Object.entries(claimMap).map(([key, value]) => {
+                              const formattedKey = key
+                                .split("_")
+                                .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                                .join(" ");
+
+                              if (key === "age_over_18") {
+                                return (
+                                  <p key={key}>
+                                    <strong>{formattedKey}:</strong>{" "}
+                                    {value === "true" ? "✅" : "❌"}
+                                  </p>
+                                );
+                              } else {
+                                return (
+                                  <p key={key}>
+                                    <strong>{formattedKey}:</strong> {value}
+                                  </p>
+                                );
+                              }
+                            })}
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* ✅ ADDED: Xaman QR flow INSIDE the same green box */}
+                      <div className="mt-6 pt-4 border-t border-green-200">
+                        <h4 className="text-md font-semibold text-gray-800 mb-2 text-center">
+                          Accept your KYC credential in Xaman
+                        </h4>
+
+                        {!xrpAddress && (
+                          <p className="text-sm text-gray-600 text-center">
+                            Connect your wallet in the header, then click the button below.
+                          </p>
+                        )}
+
+                        {xamanError && (
+                          <p className="text-sm text-red-600 text-center mt-2">{xamanError}</p>
+                        )}
+
+                        {xamanLoading && (
+                          <p className="text-sm text-gray-600 text-center mt-2">
+                            Preparing credential offer...
+                          </p>
+                        )}
+
+                        {xamanQrUrl && (
+                          <>
+                            <p className="text-sm text-gray-600 mb-3 text-center mt-2">
+                              Scan this QR code with Xaman
+                            </p>
+                            <div className="flex justify-center mb-2">
+                              <Image
+                                src={xamanQrUrl}
+                                alt="XUMM QR"
+                                width={200}
+                                height={200}
+                                className="border border-gray-200 rounded-lg"
+                              />
+                            </div>
+                          </>
+                        )}
+
+                        {/* Manual trigger if wallet connects after SUCCESS */}
+                        {!xamanQrUrl && (
+                          <div className="mt-3">
+                            <Button
+                              onClick={createXamanQr}
+                              disabled={xamanLoading || !xrpAddress}
+                              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white"
+                            >
+                              {xamanLoading ? "Preparing..." : "Generate Xaman QR"}
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+
+                      <Button
+                        onClick={() => {
+                          setKycCompleted(true);
+                          window.location.href = "/payer";
+                        }}
+                        className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        Continue to Payment
+                      </Button>
+                    </div>
+                  )}
+
+                  {verificationData?.state === "FAILED" && (
+                    <div className="mt-6 p-4 bg-red-50 rounded-lg">
+                      <h3 className="text-lg font-semibold text-red-800 mb-2">❌ Verification Failed</h3>
+                      <p className="text-red-600 mb-4">
+                        The verification process was not completed successfully.
+                      </p>
+                      <Button
+                        onClick={resetVerification}
+                        variant="outline"
+                        className="w-full border-red-300 text-red-600 hover:bg-red-50"
+                      >
+                        Try Again
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
-
-              <Button
-                onClick={startVerification}
-                disabled={isLoading}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-8 rounded-lg text-lg transition-colors duration-200"
-              >
-                {isLoading ? "Starting..." : "Start Verification"}
-              </Button>
-            </div>
-          ) : (
-            <div className="bg-white p-8 rounded-lg shadow-lg border border-gray-200 w-full">
-              <div className="text-center mb-6">
-                <h2 className="text-2xl font-semibold text-gray-800 mb-4">
-                  Scan QR Code
-                </h2>
-                
-                {verificationData && (
-                  <div className={`mb-4 p-3 rounded-lg ${verificationData.state === 'SUCCESS' ? 'bg-green-50' : verificationData.state === 'FAILED' ? 'bg-red-50' : 'bg-yellow-50'}`}>
-                    <p className={`font-semibold ${getStatusColor(verificationData.state)}`}>
-                      {getStatusIcon(verificationData.state)} Status: {verificationData.state}
-                    </p>
-                  </div>
-                )}
-
-                {qrCodeImage && verificationData?.state !== "SUCCESS" && (
-                  <>
-                    <p className="text-gray-600 mb-4">
-                      Scan this QR code with your Edel-ID app
-                    </p>
-                    <div className="flex justify-center mb-4">
-                      <Image
-                        src={qrCodeImage}
-                        alt="QR Code for verification"
-                        width={200}
-                        height={200}
-                        className="border border-gray-200 rounded-lg"
-                      />
-                    </div>
-                    <p className="text-sm text-gray-500 mb-4">
-                      Or click the link below on your mobile device
-                    </p>
-                    <a
-                      href={qrCodeUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-block bg-blue-100 text-blue-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-200 transition-colors"
-                    >
-                      Open Verification Link
-                    </a>
-                  </>
-                )}
-
-                {isLoading && verificationData?.state === "PENDING" && (
-                  <div className="mt-4">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                    <p className="text-gray-600">
-                      Waiting for verification... Please complete the process in your Edel-ID app.
-                    </p>
-                  </div>
-                )}
-
-                {verificationData?.state === "SUCCESS" && verificationData.verifiedClaims && (
-                  <div className="mt-6 p-4 bg-green-50 rounded-lg">
-                    <h3 className="text-lg font-semibold text-green-800 mb-3">
-                      ✅ Verification Successful!
-                    </h3>
-                    <div className="text-left space-y-2">
-                      {verificationData.verifiedClaims.map((claimMap, index) => (
-                        <div key={index} className="text-sm">
-                          {Object.entries(claimMap).map(([key, value]) => {
-                            // Format the key nicely
-                            const formattedKey = key
-                              .split('_')
-                              .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                              .join(' ');
-
-                            if (key === 'age_over_18') {
-                              return (
-                                <p key={key}>
-                                  <strong>{formattedKey}:</strong> {value === "true" ? "✅" : "❌"}
-                                </p>
-                              );
-                            } else {
-                              return (
-                                <p key={key}>
-                                  <strong>{formattedKey}:</strong> {value}
-                                </p>
-                              );
-                            }
-                          })}
-                        </div>
-                      ))}
-                    </div>
-                    <Button
-                      onClick={() => {
-                        setKycCompleted(true);
-                        window.location.href = "/payer";
-                      }}
-                      className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white"
-                    >
-                      Continue to Payment
-                    </Button>
-                  </div>
-                )}
-
-                {verificationData?.state === "FAILED" && (
-                  <div className="mt-6 p-4 bg-red-50 rounded-lg">
-                    <h3 className="text-lg font-semibold text-red-800 mb-2">
-                      ❌ Verification Failed
-                    </h3>
-                    <p className="text-red-600 mb-4">
-                      The verification process was not completed successfully.
-                    </p>
-                    <Button
-                      onClick={resetVerification}
-                      variant="outline"
-                      className="w-full border-red-300 text-red-600 hover:bg-red-50"
-                    >
-                      Try Again
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      </main>
-    </div>
+            )}
+          </div>
+        </main>
+      </div>
     </>
   );
 }

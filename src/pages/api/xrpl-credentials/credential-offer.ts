@@ -17,7 +17,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: "subjectAddress required" });
     }
 
-    if (!process.env.ISSUER_SECRET || !process.env.XUMM_KEY || !process.env.XUMM_KEY_SECRET) {
+    if (!process.env.ISSUER_SECRET || !process.env.XUMM_KEY || !process.env.XUMM_KEY_SECRET || !process.env.KYC_LVL) {
       return res.status(500).json({ error: "Server env missing" });
     }
 
@@ -30,11 +30,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const now = Math.floor(Date.now() / 1000);
     const expiration = now + 365 * 24 * 60 * 60; // 1 year
 
+    const KYC_LVL = process.env.KYC_LVL;
+
     const credentialCreateTx = {
       TransactionType: "CredentialCreate",
       Account: issuerAddress,
       Subject: subjectAddress,
-      CredentialType: textToHex("KYC_LVL2"),
+      CredentialType: textToHex(KYC_LVL),
       Expiration: expiration,
     };
 
@@ -59,7 +61,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       TransactionType: "CredentialAccept",
       Account: subjectAddress,
       Issuer: issuerAddress,
-      CredentialType: textToHex("KYCLVL2"),
+      CredentialType: textToHex(KYC_LVL),
     };
 
     const payload = await xumm.payload.create({ txjson: tempCredentialAcceptTx as any }, true);
