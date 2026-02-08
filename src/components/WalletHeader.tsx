@@ -97,6 +97,14 @@ export default function WalletHeader() {
                 >
                   FDC Demo
                 </Link>
+                <Link 
+                  href="/collateral-demo" 
+                  className={`text-sm font-medium transition-colors hover:text-blue-600 ${
+                    router.pathname === '/collateral-demo' ? 'text-blue-600' : 'text-gray-600'
+                  }`}
+                >
+                  Collateral
+                </Link>
               </nav>
             )}
           </div>

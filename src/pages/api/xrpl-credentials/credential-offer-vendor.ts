@@ -17,7 +17,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: "subjectAddress required" });
     }
 
-    if (!process.env.ISSUER_SECRET || !process.env.XUMM_KEY || !process.env.XUMM_KEY_SECRET || !process.env.KYC_LVL) {
+    if (!process.env.ISSUER_SECRET || !process.env.XUMM_KEY || !process.env.XUMM_KEY_SECRET || !process.env.KYC_VENDOR) {
       return res.status(500).json({ error: "Server env missing" });
     }
 

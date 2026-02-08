@@ -61,7 +61,29 @@ export default function BuyerDashboard() {
     setIsLoading(true);
     
     try {
-      // Simulate creating a payment plan
+      // Step 1: Request seller to deposit collateral
+      const collateralAmount = (product.xrpPrice * 0.2 * 10**18).toString(); // 20% of product price as collateral in wei
+      const sellerAddress = "rSELLERwALLETaDDRESSfORdEMO123456"; // This should come from seller selection
+      
+      const collateralResponse = await fetch('/api/flare/deposit-custom-instructions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          collateralAmount: collateralAmount,
+          addressVendor: sellerAddress
+        }),
+      });
+      
+      if (!collateralResponse.ok) {
+        throw new Error('Failed to create collateral deposit instruction');
+      }
+      
+      const collateralData = await collateralResponse.json();
+      console.log('🏦 Collateral deposit transaction created:', collateralData.txJson);
+      
+      // Step 2: Create the payment plan
       const newPaymentPlan: PaymentPlan = {
         totalPrice: 0.3,
         monthlyPayment: 0.025, // 0.3 / 12
@@ -74,13 +96,16 @@ export default function BuyerDashboard() {
       setPaymentPlan(newPaymentPlan);
       
       // In a real implementation, this would:
-      // 1. Create a smart contract for the payment plan
-      // 2. Process the first payment
-      // 3. Set up automated recurring payments
-      // 4. Store the plan in a database
+      // 1. ✅ Create collateral deposit instruction for seller
+      // 2. Create a smart contract for the payment plan
+      // 3. Process the first payment
+      // 4. Set up automated recurring payments
+      // 5. Store the plan in a database
+      // 6. Notify seller to sign collateral deposit transaction
       
     } catch (error) {
       console.error("Purchase failed:", error);
+      alert("Purchase failed: " + (error instanceof Error ? error.message : "Unknown error"));
     } finally {
       setIsLoading(false);
     }
