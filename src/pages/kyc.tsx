@@ -211,12 +211,17 @@ export default function KYC() {
     }
   };
 
-  // ✅ Create Xaman QR (same endpoint as your CredentialOfferButton)
+  // ✅ Create Xaman QR with role-specific endpoint
   const createXamanQr = async () => {
     setXamanError("");
 
     if (!xrpAddress) {
       setXamanError("Connect your wallet first (Xaman / Gem / Crossmark).");
+      return;
+    }
+
+    if (!selectedRole) {
+      setXamanError("Role not selected. Please refresh and select a role.");
       return;
     }
 
@@ -227,7 +232,14 @@ export default function KYC() {
     setXamanLoading(true);
 
     try {
-      const resp = await fetch("/api/xrpl-credentials/credential-offer", {
+      // Use different endpoint based on role
+      const endpoint = selectedRole === 'buyer' 
+        ? "/api/xrpl-credentials/credential-offer"
+        : "/api/xrpl-credentials/credential-offer-vendor";
+      
+      console.log(`🔄 Creating ${selectedRole} KYC credential for address: ${xrpAddress}`);
+      
+      const resp = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ subjectAddress: xrpAddress }),
@@ -241,7 +253,10 @@ export default function KYC() {
       const data = await resp.json();
       setXamanQrUrl(data.payload.refs.qr_png);
       setKycCredentialGenerated(true);
+      
+      console.log(`✅ ${selectedRole} KYC credential created successfully`);
     } catch (err: any) {
+      console.error(`❌ ${selectedRole} KYC credential creation failed:`, err);
       // allow retry if it failed
       xamanTriggeredRef.current = false;
       setXamanError(err?.message || "CredentialCreate failed");
@@ -496,7 +511,9 @@ export default function KYC() {
                             {(verificationId !== "demo_verification" || selectedRole === 'buyer') && (
                               <div className="border-t border-green-200 pt-4">
                                 <h5 className="text-sm font-semibold text-gray-800 mb-3 text-center">
-                                  {selectedRole === 'buyer' ? 'Accept KYC Credential (Required)' : 'Accept KYC Credential (Optional)'}
+                                  {selectedRole === 'buyer' 
+                                    ? 'Accept Buyer KYC Credential (Required)' 
+                                    : 'Accept Vendor KYC Credential (Optional)'}
                                 </h5>
                                 {xamanLoading && (
                                   <p className="text-sm text-gray-600 mb-2 text-center">
@@ -506,7 +523,7 @@ export default function KYC() {
                                 {xamanQrUrl && (
                                   <>
                                     <p className="text-sm text-gray-600 mb-3 text-center">
-                                      Scan this QR code with Xaman to accept your KYC credential
+                                      Scan this QR code with Xaman to accept your {selectedRole === 'buyer' ? 'Buyer' : 'Vendor'} KYC credential
                                     </p>
                                     <div className="flex justify-center mb-2">
                                       <Image
@@ -527,7 +544,7 @@ export default function KYC() {
                                       size="sm"
                                       className="bg-blue-600 hover:bg-blue-700 text-white"
                                     >
-                                      {xamanLoading ? "Preparing..." : "Generate Credential QR"}
+                                      {xamanLoading ? "Preparing..." : `Generate ${selectedRole === 'buyer' ? 'Buyer' : 'Vendor'} KYC Credential`}
                                     </Button>
                                   </div>
                                 )}
