@@ -58,7 +58,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     return res.status(200).json({
       qrUrl: payload.refs.qr_png,
-      qrUri: payload.refs.qr_uri,
       payloadUuid: payload.uuid,
       deepLink: payload.next.always,
       txJson: approvalData.txJson,
