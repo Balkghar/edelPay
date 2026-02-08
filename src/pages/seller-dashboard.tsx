@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import WalletHeader from "@/components/WalletHeader";
+import CollateralDepositManager from "@/components/CollateralDepositManager";
 import { useWalletContext } from "@/contexts/WalletContext";
 import { Inter } from "next/font/google";
 import Head from "next/head";
@@ -191,6 +192,11 @@ export default function SellerDashboard() {
               <div className="text-2xl font-bold text-red-600">{salesStats.overduePayments}</div>
               <div className="text-gray-600">Overdue</div>
             </div>
+          </div>
+
+          {/* Collateral Deposit Management */}
+          <div className="mb-8">
+            <CollateralDepositManager sellerAddress={xrpAddress} />
           </div>
 
           {/* Customer Payment Tracking */}

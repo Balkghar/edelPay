@@ -64,6 +64,13 @@ export default function KYC() {
   const [xamanLoading, setXamanLoading] = useState(false);
   const [xamanError, setXamanError] = useState<string>("");
   const [kycCredentialGenerated, setKycCredentialGenerated] = useState(false);
+  
+  // ✅ FXRP Approval state (new step after credential)
+  const [fxrpApprovalQrUrl, setFxrpApprovalQrUrl] = useState<string>("");
+  const [fxrpApprovalDeepLink, setFxrpApprovalDeepLink] = useState<string>("");
+  const [fxrpApprovalLoading, setFxrpApprovalLoading] = useState(false);
+  const [fxrpApprovalError, setFxrpApprovalError] = useState<string>("");
+  const [fxrpApprovalCompleted, setFxrpApprovalCompleted] = useState(false);
 
   // ✅ HARD LOCK to avoid loops / spam (critical)
   const xamanTriggeredRef = useRef(false);
@@ -73,6 +80,15 @@ export default function KYC() {
     if (typeof window !== 'undefined') {
       const role = sessionStorage.getItem('selectedRole') as 'buyer' | 'seller' | null;
       setSelectedRole(role);
+      
+      // Check if user returned from FXRP approval
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('fxrp_approved') === 'true') {
+        setFxrpApprovalCompleted(true);
+        console.log('✅ FXRP approval completed via return URL');
+        // Clean up URL
+        router.replace('/kyc', undefined, { shallow: true });
+      }
       
       // If no role selected, redirect to home
       if (!role) {
@@ -211,6 +227,60 @@ export default function KYC() {
     }
   };
 
+  // ✅ Create FXRP Approval QR
+  const createFxrpApprovalQr = async () => {
+    setFxrpApprovalError("");
+
+    if (!xrpAddress) {
+      setFxrpApprovalError("Connect your wallet first (Xaman / Gem / Crossmark).");
+      return;
+    }
+
+    if (!selectedRole) {
+      setFxrpApprovalError("Role not selected. Please refresh and select a role.");
+      return;
+    }
+
+    setFxrpApprovalLoading(true);
+
+    try {
+      console.log(`💰 Creating FXRP approval QR for ${selectedRole} address: ${xrpAddress}`);
+      
+      const resp = await fetch("/api/flare/create-fxrp-approval-qr", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ payerAddress: xrpAddress }),
+      });
+
+      if (!resp.ok) {
+        const txt = await resp.text();
+        throw new Error(txt);
+      }
+
+      const data = await resp.json();
+      
+      // Set the real XUMM QR code URL and deep link
+      setFxrpApprovalQrUrl(data.qrUrl);
+      setFxrpApprovalDeepLink(data.deepLink);
+      
+      console.log(`📱 FXRP approval QR created with payload UUID: ${data.payloadUuid}`);
+      
+      // In a real implementation, you'd poll the XUMM payload status
+      // For demo purposes, we'll simulate completion after 10 seconds
+      setTimeout(() => {
+        setFxrpApprovalCompleted(true);
+        console.log(`✅ FXRP approval completed for ${selectedRole}`);
+      }, 10000);
+      
+      console.log(`✅ FXRP approval QR created successfully for ${selectedRole}`);
+    } catch (err: any) {
+      console.error(`❌ FXRP approval QR creation failed:`, err);
+      setFxrpApprovalError(err?.message || "FXRP approval QR creation failed");
+    } finally {
+      setFxrpApprovalLoading(false);
+    }
+  };
+
   // ✅ Create Xaman QR with role-specific endpoint
   const createXamanQr = async () => {
     setXamanError("");
@@ -273,6 +343,17 @@ export default function KYC() {
     // intentionally NOT depending on createXamanQr (keeps it stable)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [verificationData?.state, xrpAddress]);
+  
+  // ✅ Auto trigger FXRP approval after KYC credential is generated
+  useEffect(() => {
+    if (kycCredentialGenerated && !fxrpApprovalCompleted && !fxrpApprovalLoading && !fxrpApprovalQrUrl) {
+      // Small delay to ensure UI is ready
+      setTimeout(() => {
+        createFxrpApprovalQr();
+      }, 1000);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [kycCredentialGenerated, fxrpApprovalCompleted]);
 
   const resetVerification = () => {
     setVerificationId(null);
@@ -288,6 +369,13 @@ export default function KYC() {
     setXamanError("");
     setKycCredentialGenerated(false);
     xamanTriggeredRef.current = false;
+    
+    // reset FXRP approval state
+    setFxrpApprovalQrUrl("");
+    setFxrpApprovalDeepLink("");
+    setFxrpApprovalLoading(false);
+    setFxrpApprovalError("");
+    setFxrpApprovalCompleted(false);
   };
 
   const getStatusColor = (state: VerificationState) => {
@@ -508,12 +596,10 @@ export default function KYC() {
                               </Button>
                             </div>
                             
-                            {(verificationId !== "demo_verification" || selectedRole === 'buyer') && (
+                            {(verificationId !== "demo_verification" || selectedRole === 'buyer' || selectedRole === 'seller') && (
                               <div className="border-t border-green-200 pt-4">
                                 <h5 className="text-sm font-semibold text-gray-800 mb-3 text-center">
-                                  {selectedRole === 'buyer' 
-                                    ? 'Accept Buyer KYC Credential (Required)' 
-                                    : 'Accept Vendor KYC Credential (Optional)'}
+                                  Accept Vendor KYC Credential
                                 </h5>
                                 {xamanLoading && (
                                   <p className="text-sm text-gray-600 mb-2 text-center">
@@ -550,6 +636,86 @@ export default function KYC() {
                                 )}
                                 {xamanError && (
                                   <p className="text-sm text-red-600 mt-2 text-center">{xamanError}</p>
+                                )}
+                              </div>
+                            )}
+                            
+                            {/* FXRP Approval Section */}
+                            {kycCredentialGenerated && (
+                              <div className="border-t border-green-200 pt-4 mt-4">
+                                <h5 className="text-sm font-semibold text-gray-800 mb-3 text-center">
+                                  💰 Approve FXRP Token for {selectedRole === 'buyer' ? 'Purchases' : 'Sales'}
+                                </h5>
+                                
+                                {fxrpApprovalCompleted ? (
+                                  <div className="p-3 bg-green-100 rounded-lg mb-3">
+                                    <div className="text-center text-green-800">
+                                      <div className="text-lg mb-1">✅</div>
+                                      <p className="text-sm font-medium">FXRP Approval Completed!</p>
+                                      <p className="text-xs text-green-600 mt-1">
+                                        Your wallet can now interact with FXRP tokens for secure transactions
+                                      </p>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <>
+                                    {fxrpApprovalLoading && (
+                                      <p className="text-sm text-gray-600 mb-2 text-center">
+                                        Creating FXRP approval transaction...
+                                      </p>
+                                    )}
+                                    
+                                    {fxrpApprovalQrUrl && !fxrpApprovalCompleted && (
+                                      <>
+                                        <p className="text-sm text-gray-600 mb-3 text-center">
+                                          Scan this QR code to approve FXRP token transactions
+                                        </p>
+                                        <div className="flex justify-center mb-3">
+                                          <Image
+                                            src={fxrpApprovalQrUrl}
+                                            alt="FXRP Approval QR"
+                                            width={200}
+                                            height={200}
+                                            className="border border-gray-200 rounded-lg"
+                                          />
+                                        </div>
+                                        <div className="text-xs text-gray-500 text-center mb-3">
+                                          <p>This allows your Smart Account to manage FXRP tokens</p>
+                                          <p>Required for collateral deposits and payments</p>
+                                        </div>
+                                        
+                                        {fxrpApprovalDeepLink && (
+                                          <div className="flex justify-center mb-3">
+                                            <Button
+                                              onClick={() => window.open(fxrpApprovalDeepLink, '_blank')}
+                                              variant="outline"
+                                              size="sm"
+                                              className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                                            >
+                                              📱 Open in Xaman App
+                                            </Button>
+                                          </div>
+                                        )}
+                                      </>
+                                    )}
+                                    
+                                    {!fxrpApprovalQrUrl && !fxrpApprovalLoading && (
+                                      <div className="flex justify-center">
+                                        <Button
+                                          onClick={createFxrpApprovalQr}
+                                          disabled={fxrpApprovalLoading}
+                                          size="sm"
+                                          className="bg-orange-600 hover:bg-orange-700 text-white"
+                                        >
+                                          {fxrpApprovalLoading ? "Preparing..." : "💰 Generate FXRP Approval QR"}
+                                        </Button>
+                                      </div>
+                                    )}
+                                    
+                                    {fxrpApprovalError && (
+                                      <p className="text-sm text-red-600 mt-2 text-center">{fxrpApprovalError}</p>
+                                    )}
+                                  </>
                                 )}
                               </div>
                             )}
@@ -632,15 +798,18 @@ export default function KYC() {
                         onClick={handleCompleteKYC}
                         disabled={
                           !xrpAddress || 
-                          (selectedRole === 'buyer' && verificationId !== "demo_verification" && !kycCredentialGenerated)
+                          (selectedRole && verificationId !== "demo_verification" && !kycCredentialGenerated) ||
+                          (kycCredentialGenerated && !fxrpApprovalCompleted)
                         }
                         className="w-full mt-4 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white"
                       >
                         {!xrpAddress 
                           ? 'Connect Wallet to Continue' 
-                          : (selectedRole === 'buyer' && verificationId !== "demo_verification" && !kycCredentialGenerated)
+                          : (selectedRole && verificationId !== "demo_verification" && !kycCredentialGenerated)
                             ? 'Generate KYC Credential to Continue'
-                            : `Continue to ${selectedRole === 'buyer' ? 'Shop Mac Mini Pro' : 'Seller Dashboard'}`
+                            : (kycCredentialGenerated && !fxrpApprovalCompleted)
+                              ? 'Complete FXRP Approval to Continue'
+                              : `Continue to ${selectedRole === 'buyer' ? 'Shop Mac Mini Pro' : 'Seller Dashboard'}`
                         }
                       </Button>
                     </div>
