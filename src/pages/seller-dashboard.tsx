@@ -146,6 +146,37 @@ export default function SellerDashboard() {
     alert("Payment reminder sent successfully!");
   };
 
+  const [mappingLoading, setMappingLoading] = useState<Record<string, boolean>>({});
+
+  const registerVendorPayerMapping = async (customerId: string, payerAddress: string) => {
+    if (!xrpAddress) {
+      alert("Seller XRPL address not available");
+      return;
+    }
+
+    setMappingLoading((s) => ({ ...s, [customerId]: true }));
+    try {
+      const resp = await fetch("/api/flare/add-mapping-vendor-instructions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vendorAddress: xrpAddress, payerAddress }),
+      });
+
+      const json = await resp.json().catch(() => ({}));
+      if (resp.ok) {
+        alert("Mapping registered successfully");
+      } else {
+        console.error(json);
+        alert(`Mapping failed: ${json?.error || resp.statusText}`);
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(`Mapping failed: ${err?.message || String(err)}`);
+    } finally {
+      setMappingLoading((s) => ({ ...s, [customerId]: false }));
+    }
+  };
+
   if (!isContextLoaded) {
     return <div>Loading...</div>;
   }
@@ -288,24 +319,28 @@ export default function SellerDashboard() {
                       </td>
                       
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        {customer.status === "overdue" ? (
-                          <Button
-                            size="sm"
-                            onClick={() => sendPaymentReminder(customer.id)}
-                            className="bg-red-600 hover:bg-red-700 text-white"
-                          >
-                            Send Reminder
-                          </Button>
-                        ) : customer.status === "active" ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => sendPaymentReminder(customer.id)}
-                          >
-                            Send Reminder
-                          </Button>
-                        ) : (
+                        {customer.status === "completed" ? (
                           <span className="text-gray-400">No action needed</span>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <Button
+                              size="sm"
+                              variant={customer.status === "overdue" ? undefined : "outline"}
+                              onClick={() => sendPaymentReminder(customer.id)}
+                              className={customer.status === "overdue" ? "bg-red-600 hover:bg-red-700 text-white" : undefined}
+                            >
+                              Send Reminder
+                            </Button>
+
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => registerVendorPayerMapping(customer.id, customer.walletAddress)}
+                              disabled={!!mappingLoading[customer.id]}
+                            >
+                              {mappingLoading[customer.id] ? "Registering..." : "Register Mapping"}
+                            </Button>
+                          </div>
                         )}
                       </td>
                     </tr>
