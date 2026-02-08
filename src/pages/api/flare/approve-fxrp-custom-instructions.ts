@@ -4,15 +4,15 @@ import {
   getInstructionFee,
   getOperatorXrplAddresses,
   registerCustomInstruction,
-  type CustomInstruction
+  type CustomInstruction,
+  getPersonalAccountAddress,
 } from "../../../../packages/flare-smart-accounts-viem/src/utils/smart-accounts";
 import { publicClient } from "../../../../packages/flare-smart-accounts-viem/src/utils/client";
-import { abi as checkpointAbi } from "../../../../packages/flare-smart-accounts-viem/src/abis/Checkpoint";
 import { abi as instructionsAbi } from "../../../../packages/flare-smart-accounts-viem/src/abis/CustomInstructionsFacet";
-import { abi as vaultAbi } from "../../../../packages/flare-smart-accounts-viem/src/abis/Vault";
-
+import { abi as erc20Abi } from "../../../../packages/flare-smart-accounts-viem/src/abis/IERC20";
 import { MASTER_ACCOUNT_CONTROLLER_ADDRESS } from "../../../../packages/flare-smart-accounts-viem/src/utils/smart-accounts";
 import { toHex } from "viem";
+
 
 async function encodeCustomInstruction(
   instructions: CustomInstruction[],
@@ -39,28 +39,35 @@ export default async function handler(
       return res.status(405).end();
     }
 
-    const contractAddress = process.env.VAULT_CONTRACT_ADDRESS;
-    if (!contractAddress) {
+    // Adresse du token fXRP sur Coston2
+    const FXRP_TOKEN_ADDRESS = process.env.FXRP_CONTRACT_ADDRESS;
+
+    // Adresse de ton contrat vault
+    const vaultAddress = process.env.VAULT_CONTRACT_ADDRESS;
+    if (!vaultAddress) {
       return res.status(500).json({ error: "Vault contract address not set" });
     }
 
     const walletId = 0;
+    const payerXrplAddress = req.body.payerAddress as string;
 
-    const collateralAmount = req.body.collateralAmount as string;
+    const payerPersonalFlareAddress = await getPersonalAccountAddress(
+      payerXrplAddress
+    );
+
+    const approveAmount = 10000000;
 
     const customInstructions: CustomInstruction[] = [
       {
-        targetContract: contractAddress as `0x${string}`,
+        targetContract: FXRP_TOKEN_ADDRESS as `0x${string}`,
         value: BigInt(0),
         data: encodeFunctionData({
-          abi: checkpointAbi,
-          functionName: "depositCollateral",
-          args: [BigInt(collateralAmount)],
+          abi: erc20Abi,
+          functionName: "approve",
+          args: [vaultAddress as `0x${string}`, BigInt(approveAmount)],
         }),
       },
     ] as CustomInstruction[];
-
-    const address = req.body.address;
 
     await registerCustomInstruction(customInstructions);
     const encodedInstruction = await encodeCustomInstruction(
