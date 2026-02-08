@@ -1,176 +1,198 @@
-# EdelPay - Secure Payment Platform with XRPL Integration
+# EdelPay - Installment Payment Platform with XRPL & Flare
 
-A modern, secure payment platform built on the XRP Ledger (XRPL) with multi-wallet support, KYC verification, and subscription management. Built with Next.js, TypeScript, and Tailwind CSS.
+A modern, secure installment payment platform built on the XRP Ledger (XRPL) and Flare Network with multi-wallet support, KYC verification, and smart contract-based collateral management. Built with Next.js, TypeScript, Tailwind CSS, and Viem.
 
-## 🎯 Features
+## 🎯 Overview
 
-### Core Features
+EdelPay enables secure buy-now-pay-later (BNPL) transactions where sellers deposit collateral that gets automatically released upon successful payment completion. The platform leverages:
 
-- **Multi-Wallet Support**: Connect with XUMANN, GEM, and Crossmark wallets
-- **KYC Verification**: Integrated Edel-ID verification for user onboarding
-- **Subscription Management**: Manage subscriptions and recurring payments
-- **Installment Payments**: Support for installment-based purchases
-- **Payment History**: Track all transactions and payment history
-- **JWT Authentication**: Secure session management with token persistence
-- **Smart Routing**: Automatic redirection based on user authentication status
+- **XRPL** for payment settlement
+- **Flare Network** for smart contracts and collateral management  
+- **State Connector** for cross-chain payment verification
+- **Multiple wallet support** for accessibility
 
-### Security Features
+## ✨ Key Features
 
-- JWT-based authentication with cookie persistence
-- User session management with wallet verification
-- Automatic logout and session handling
-- Encryption of sensitive user data
+### Payment Features
+- ✅ **Installment Payments** - Split purchases into monthly payments
+- ✅ **Collateral Management** - Seller deposits collateral via Flare smart contracts
+- ✅ **Automatic Release** - Collateral released upon full payment
+- ✅ **Vendor-Payer Mapping** - Link vendor and payer relationships on-chain
+- ✅ **Payment Tracking** - Real-time payment history and status
 
-### User Flows
+### Security & Verification
+- ✅ **KYC Integration** - Swiss Digital Identity verification for user onboarding
+- ✅ **JWT Authentication** - Secure session management with token persistence
+- ✅ **Multi-Wallet Support** - XAMAN, GEM Wallet, Crossmark
+- ✅ **Cross-Chain Verification** - Flare State Connector attestation
 
-1. **Not Connected Users** → KYC Page (for verification)
-2. **Connected but Not Onboarded** → KYC Page (for verification)
-3. **Connected and Onboarded** → Dashboard (payment management)
+### Smart Contract Integration
+- ✅ **Custom Instructions** - Encode and execute smart account operations
+- ✅ **Vault Contract** - Secure collateral storage and release logic
+- ✅ **Checkpoint Contract** - Period-based collateral retrieval
+- ✅ **FXRP Token** - Wrapped XRP on Flare for collateral
 
-## 🏗️ Project Structure
+## 🔄 How It Works
 
-```
-src/
-├── pages/
-│   ├── index.tsx              # Home page (auto-redirects)
-│   ├── kyc.tsx                # KYC verification with Edel-ID
-│   ├── dashboard.tsx          # Main dashboard for payments
-│   ├── payer.tsx              # Payment sending interface
-│   ├── seller.tsx             # Seller dashboard (coming soon)
-│   ├── onboarding.tsx         # Onboarding flow
-│   ├── _app.tsx               # App wrapper with WalletProvider
-│   ├── _document.tsx          # Document wrapper with favicons
-│   └── api/                   # Backend API routes
-│       ├── auth/              # Authentication endpoints
-│       ├── check-verification/# Verification status checks
-│       └── issuer/            # Credential issuing
-├── components/
-│   ├── WalletHeader.tsx       # Navigation header with wallet status
-│   ├── CredentialOfferButton.tsx
-│   └── ui/                    # Shadcn UI components
-├── contexts/
-│   └── WalletContext.tsx      # Global wallet state management
-├── hooks/
-│   ├── useWallet.ts           # Multi-wallet connection hook
-│   └── useXRPLPayment.ts      # Payment processing hook
-├── lib/
-│   └── xrpl/                  # XRPL utilities
-├── styles/
-│   └── globals.css            # Global styles
-└── middleware.ts              # Next.js routing middleware
-```
+### Buyer Flow
+1. **Browse & Purchase** - Select product with installment option
+2. **Deposit Collateral** - System deposits seller's collateral as security
+3. **Monthly Payments** - Buyer pays monthly installments via XRPL
+4. **Payment Verification** - Flare State Connector verifies on-chain payments
+5. **Completion** - Upon final payment, buyer can retrieve collateral
 
-## 🔑 Supported Wallets
-
-- **[XUMM/XAMAN](https://xumm.app/)** - QR-based wallet connection
-- **[GEM Wallet](https://gemwallet.app/)** - Browser extension wallet
-- **[Crossmark](https://crossmark.io/)** - Multi-signature wallet
+### Seller Flow
+1. **Deposit Collateral** - Seller deposits collateral for the product
+2. **Verify Payer** - Map payer address for tracking
+3. **Track Payments** - Monitor buyer payment progress in real-time
+4. **Manage Mapping** - Register vendor-payer relationships on Flare
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 
 - Node.js 18+
-- npm, yarn, or pnpm
-- XRPL wallet (one of the supported wallets above)
+- pnpm (recommended) or npm
+- XRPL Testnet wallet
+- Environment variables for API keys
 
-### Installation
+## 🚀 Getting Started
 
-1. **Clone the repository**
+### Prerequisites
 
+- Node.js 18+
+- pnpm (recommended) or npm
+- XRPL Testnet wallet
+- Environment variables for API keys
+
+### Installation & Setup
+
+1. **Clone and install**
    ```bash
    git clone <repository-url>
    cd edelPay
-   ```
-
-2. **Install dependencies**
-
-   ```bash
-   npm install
-   # or
    pnpm install
    ```
 
-3. **Setup environment variables**
-   - Copy `.env.template` to `.env.local`
-
+2. **Configure environment**
    ```bash
-   cp .env.template .env.local
+   # Create .env.local with required variables
+   cp .env.example .env.local  # if available
    ```
 
-4. **Configure your keys**
-   Edit `.env.local` and add:
-   - **XUMM API Keys**: Get from [XUMM Dev Portal](https://apps.xumm.dev/)
-   - **ENC_KEY**: Encryption key for storing user addresses (generate any random string)
-
-   Example `.env.local`:
-
+3. **Update `.env.local`**
+   ```env
+   # XUMM Integration
+   NEXT_PUBLIC_XUMM_API_KEY=your-key
+   XUMM_API_SECRET=your-secret
+   
+   # Encryption
+   ENC_KEY=your-encryption-key
+   
+   # Flare Smart Contracts
+   VAULT_CONTRACT_ADDRESS=0x...
+   DEPOSIT_AMOUNT=1000000000000000000
+   
+   # XRPL Issuer
+   ISSUER_SECRET=your-issuer-seed
    ```
-   NEXT_PUBLIC_XUMM_API_KEY=your-api-key-here
-   XUMM_API_SECRET=your-secret-here
-   ENC_KEY=your-encryption-key-here
+
+4. **Run development server**
+   ```bash
+   pnpm dev
+   ```
+   Navigate to [http://localhost:3000](http://localhost:3000)
+
+5. **Production build**
+   ```bash
+   pnpm build
+   pnpm start
    ```
 
-### Running the Development Server
+## 🔑 Supported Wallets
 
-```bash
-npm run dev
-# or
-pnpm dev
-```
+| Wallet | Type | Link |
+|--------|------|------|
+| **XAMAN** | QR-based Mobile | [xumm.app](https://xumm.app/) |
+| **GEM Wallet** | Browser Extension | [gemwallet.app](https://gemwallet.app/) |
+| **Crossmark** | Multi-signature | [crossmark.io](https://crossmark.io/) |
 
-Open [http://localhost:3000](http://localhost:3000) with your browser.
+## 🔐 User Authentication & Flow
 
-### Building for Production
-
-```bash
-npm run build
-npm start
-```
-
-## 🔄 User Authentication Flow
-
-### Login Flow
-
+### Buyer Journey
 1. User lands on `http://localhost:3000`
-2. Middleware redirects to `/kyc` (not connected/not onboarded)
+2. Middleware redirects to `/kyc` (if not onboarded)
 3. User connects wallet (XUMM, GEM, or Crossmark)
-4. User completes KYC verification with Edel-ID
-5. After completion: redirect to `/dashboard`
+4. Complete KYC verification with Edel-ID
+5. Redirected to `/buyer-dashboard` upon success
 
-### Dashboard Access
+### Seller Journey
+1. Connect wallet via header
+2. Complete KYC verification
+3. Access `/seller-dashboard` to manage listings
+4. Register vendor-payer mappings for new purchases
+5. Monitor payment progress in real-time
 
-- Connected + Onboarded users can access `/dashboard`
-- Try accessing `/dashboard` without credentials → redirects to `/kyc`
-- All session data persists in cookies
+### Session Management
+- JWT tokens stored in cookies with expiration
+- Automatic logout on token expiry
+- Session data persists across page reloads
+- Manual logout clears all user data
 
-### Logout
+## 📄 Key Pages & Features
 
-- Click logout in header
-- Session is cleared
-- Redirected back to `/kyc`
+### Buyer Dashboard (`/buyer-dashboard`)
+- 📊 **Payment Overview** - Total paid, remaining balance, progress
+- 💳 **Monthly Payments** - Pay installments with XUMM signature
+- 📜 **Payment History** - Full transaction ledger
+- 🔄 **Collateral Retrieval** - Claim collateral after final payment
 
-## 📄 Key Pages
+**Flare Integration:**
+- Deposit collateral via smart contracts
+- Real-time balance tracking
+- Automatic collateral release on completion
+
+### Seller Dashboard (`/seller-dashboard`)
+- 👥 **Customer Management** - View all buyers and their status
+- 📈 **Sales Statistics** - Total revenue, active plans, overdue payments
+- 🗺️ **Vendor Mapping** - Register buyer-seller relationships on-chain
+- 💰 **Collateral Deposit** - Manage secured deposits
 
 ### KYC Verification (`/kyc`)
+- **Edel-ID Integration** - Age & identity verification
+- **Real-time Status** - SSE updates during verification
+- **Multi-role Support** - Separate flows for buyers and sellers
+- **Auto-redirect** - Seamless redirect on completion
 
-- Integrated Edel-ID verification
-- Collects: Age verification (18+), first name, last name
-- Server-Sent Events (SSE) for real-time verification status
-- Auto-redirect to dashboard on success
+### Payer Page (`/payer`)
+- Send XRP to any address
+- Optional credential offers for KYC
+- Transaction validation and error handling
 
-### Dashboard (`/dashboard`)
+## 🧠 Smart Contract Integration
 
-- **Subscriptions**: View and manage active subscriptions
-- **Payment History**: Track all past transactions
-- **Installments**: Manage installment-based products
-- **Wallet Info**: View connected wallet address
+### Flare API Endpoints
 
-### Payer (`/payer`)
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/flare/add-mapping-vendor-instructions` | POST | Register vendor-payer mapping |
+| `/api/flare/deposit-custom-instructions` | POST | Deposit collateral for purchase |
+| `/api/flare/retrieve-full-instructions` | POST | Retrieve collateral after payment |
+| `/api/flare/approve-fxrp-custom-instructions` | POST | Approve FXRP token spending |
 
-- Send XRP payments to other addresses
-- Payment amount and recipient validation
-- Credential offering for KYC verification
+### Smart Contracts Used
+
+1. **Vault** - Secure collateral storage
+   - `depositCollateral()` - Store funds
+   - `addVendorPayer()` - Register relationships
+   - `retrieveCollateral()` - Release on success
+
+2. **Checkpoint** - Period-based collateral retrieval
+   - `retrievePeriodCollateral()` - Release funds per period
+
+3. **CustomInstructionsFacet** - Instruction encoding
+   - `encodeCustomInstruction()` - Encode smart account calls
+   - `registerCustomInstruction()` - Register new instructions
 
 ## 🛠️ Technology Stack
 
@@ -189,119 +211,124 @@ npm start
 - **JWT** - Authentication tokens
 - **Cookies** - Session storage
 
-### XRPL Integration
+### Blockchain & Web3
 
-- **xumm-sdk** - XUMM wallet integration
-- **@gemwallet/api** - GEM wallet integration
-- **@crossmarkio/sdk** - Crossmark wallet integration
-- **ripple-keypairs** - XRPL key generation
-- **verify-xrpl-signature** - Signature verification
+- **Viem** - Ethereum client library
+- **XRPL** - XRP Ledger SDK
+- **XUMM SDK** - XUMM wallet integration
+- **@gemwallet/api** - GEM wallet support
+- **@crossmarkio/sdk** - Crossmark integration
+- **Flare Smart Accounts** - Account abstraction on Flare
 
-### Other
+### Other Libraries
 
 - **qrcode** - QR code generation
 - **react-cookie** - Cookie management
 - **jsonwebtoken** - JWT handling
+- **encryption** - User data encryption
 
-## 🔐 Routing & Middleware
+## 🔄 Data Flow Architecture
 
-### Middleware Rules (`src/middleware.ts`)
+```
+┌─────────────────────────────────────┐
+│         User Wallets                │
+│  (XAMAN, GEM, Crossmark)            │
+└──────────────┬──────────────────────┘
+               │
+               ▼
+┌─────────────────────────────────────┐
+│      EdelPay Frontend                │
+│    (Next.js + React + Tailwind)     │
+└──────────────┬──────────────────────┘
+               │
+      ┌────────┴────────┐
+      ▼                 ▼
+┌──────────────┐  ┌──────────────────┐
+│ XRPL Payment │  │  Flare Smart     │
+│  Settlement  │  │   Contracts      │
+└──────────────┘  └──────────────────┘
+      │                 │
+      └────────┬────────┘
+               ▼
+      ┌─────────────────┐
+      │  State Connector│
+      │ (Cross-chain    │
+      │  Verification)  │
+      └─────────────────┘
+```
 
-- `/` → redirects to `/kyc` if not onboarded, `/dashboard` if onboarded
-- `/dashboard` → redirects to `/kyc` if not onboarded
-- `/kyc` → redirects to `/dashboard` if already onboarded
+## 📋 Environment Variables Reference
 
-### WalletContext
-
-Manages global state:
-
-- `xrpAddress` - Connected wallet address
-- `kycCompleted` - KYC verification status
-- `isContextLoaded` - Context initialization flag
-- Wallet connection methods (XUMM, GEM, Crossmark)
-
-## 📝 Environment Variables
-
-| Variable                   | Description                  | Example        |
-| -------------------------- | ---------------------------- | -------------- |
-| `NEXT_PUBLIC_XUMM_API_KEY` | XUMM public API key          | `abc123...`    |
-| `XUMM_API_SECRET`          | XUMM secret key              | `secret123...` |
-| `ENC_KEY`                  | Encryption key for user data | `randomkey123` |
-
-## 🎨 UI Components
-
-### Page Structure
-
-- All pages include `Head` component for SEO (page titles + descriptions)
-- `WalletHeader` - Navigation bar with wallet status
-- Responsive design for desktop and mobile
-- Tailwind CSS + Shadcn UI components
-
-### Available Pages
-
-- KYC Verification
-- Dashboard
-- Payer
-- Onboarding
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `NEXT_PUBLIC_XUMM_API_KEY` | XUMM public API key | `abc123...` |
+| `XUMM_API_SECRET` | XUMM secret key | `secret123...` |
+| `ENC_KEY` | Encryption key for user data | `randomkey123` |
+| `VAULT_CONTRACT_ADDRESS` | Flare Vault contract address | `0x...` |
+| `DEPOSIT_AMOUNT` | Default collateral amount | `1000000000000000000` |
+| `ISSUER_SECRET` | XRPL issuer seed for transactions | `sXXXXXXX...` |
 
 ## 🐛 Troubleshooting
 
-### Wallet Not Connecting
+### Wallet Connection Issues
+- Ensure wallet extension is installed and unlocked
+- Verify XUMM API keys in `.env.local`
+- Check network connectivity to XRPL
 
-- Ensure you have the wallet extension installed
-- Check XUMM API keys in `.env.local`
-- Verify wallet is unlocked
+### KYC Verification Failures
+- Verify Edel-ID service is operational
+- Clear browser cookies and cache
+- Try in a private/incognito window
 
-### KYC Not Completing
+### Smart Contract Errors
+- Confirm `VAULT_CONTRACT_ADDRESS` is correct
+- Check `ISSUER_SECRET` is valid XRPL seed
+- Verify sufficient XRP for transaction fees
 
-- Ensure Edel-ID service is accessible
-- Check network connectivity
-- Try refreshing the page
-
-### Middleware Redirects Not Working
-
-- Clear browser cookies
+### Middleware Redirect Issues
+- Clear all cookies: `Ctrl+Shift+Delete`
 - Restart development server
 - Check `src/middleware.ts` configuration
 
-## 📚 Resources
+## 📚 Resources & Documentation
 
-- [XRPL Documentation](https://xrpl.org/)
+### XRPL & Blockchain
+- [XRP Ledger Docs](https://xrpl.org/)
+- [Flare Network](https://flare.network/)
+- [State Connector](https://docs.flare.network/tech/state-connector/)
+
+### Development Tools
 - [Next.js Documentation](https://nextjs.org/docs)
+- [Viem Documentation](https://viem.sh)
 - [XUMM Dev Portal](https://apps.xumm.dev/)
-- [GEM Wallet Docs](https://gemwallet.app/)
-- [Crossmark Docs](https://crossmark.io/)
+- [GEM Wallet Docs](https://gemwallet.app/docs)
+
+### Additional Links
 - [Edel-ID](https://edel-id.ch/)
+- [Tailwind CSS](https://tailwindcss.com/)
+- [TypeScript Handbook](https://www.typescriptlang.org/docs/)
 
 ## 📄 License
 
-This project is private and proprietary.
-
-## 👥 Contributors
-
-- Development team
+MIT License - see LICENSE file for details
 
 ---
 
-**Last Updated**: February 7, 2026
+**Last Updated:** February 8, 2026  
+**Version:** 1.0.0  
+**Status:** Active Development
 
-[API routes](https://nextjs.org/docs/api-routes/introduction) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.ts`.
+---
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/api-routes/introduction) instead of React pages.
+## 🤝 Contributing
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+Contributions are welcome! Please:
 
-## Learn More
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit changes (`git commit -m 'Add amazing feature'`)
+4. Push to branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) ; learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
