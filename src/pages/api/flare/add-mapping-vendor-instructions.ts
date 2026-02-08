@@ -14,6 +14,7 @@ import { Client, Wallet, xrpToDrops } from "xrpl";
 
 import { MASTER_ACCOUNT_CONTROLLER_ADDRESS } from "../../../../packages/flare-smart-accounts-viem/src/utils/smart-accounts";
 import { toHex } from "viem";
+import { sendCustomInstruction } from "../../../../packages/flare-smart-accounts-viem/src/custom-instructions";
 
 const textToHex = (text: string) => Buffer.from(text, "utf8").toString("hex").toUpperCase();
 
@@ -75,6 +76,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await registerCustomInstruction(customInstructions);
     const encodedInstruction = await encodeCustomInstruction(customInstructions, walletId);
 
+    let xrplClient = new Client("wss://s.altnet.rippletest.net:51233");
+    const xrplWallet = Wallet.fromSeed(process.env.ISSUER_SEED!);
+    await sendCustomInstruction({
+      encodedInstruction,
+      xrplClient,
+      xrplWallet,
+    });
     const operatorXrplAddress = (await getOperatorXrplAddresses())[0];
     const instructionFee = await getInstructionFee(encodedInstruction);
 

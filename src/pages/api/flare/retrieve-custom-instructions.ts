@@ -6,6 +6,7 @@ import {
   registerCustomInstruction,
   type CustomInstruction, getPersonalAccountAddress,
 } from "../../../../packages/flare-smart-accounts-viem/src/utils/smart-accounts";
+import {sendCustomInstruction} from "../../../../packages/flare-smart-accounts-viem/src/custom-instructions";
 import { publicClient } from "../../../../packages/flare-smart-accounts-viem/src/utils/client";
 import { abi as checkpointAbi } from "../../../../packages/flare-smart-accounts-viem/src/abis/Checkpoint";
 import { abi as instructionsAbi } from "../../../../packages/flare-smart-accounts-viem/src/abis/CustomInstructionsFacet";
@@ -13,6 +14,7 @@ import { abi as vaultAbi } from "../../../../packages/flare-smart-accounts-viem/
 
 import { MASTER_ACCOUNT_CONTROLLER_ADDRESS } from "../../../../packages/flare-smart-accounts-viem/src/utils/smart-accounts";
 import { toHex } from "viem";
+import { Client, Wallet } from "xrpl";
 
 async function encodeCustomInstruction(
   instructions: CustomInstruction[],
@@ -64,11 +66,21 @@ export default async function handler(
       },
     ] as CustomInstruction[];
 
+
     await registerCustomInstruction(customInstructions);
     const encodedInstruction = await encodeCustomInstruction(
       customInstructions,
       walletId
     );
+
+    let xrplClient = new Client("wss://s.altnet.rippletest.net:51233");
+    const xrplWallet = Wallet.fromSeed(process.env.ISSUER_SEED!);
+
+    await sendCustomInstruction({
+      encodedInstruction,
+      xrplClient,
+      xrplWallet,
+    });
 
     const operatorXrplAddress = (await getOperatorXrplAddresses())[0];
     const instructionFee = await getInstructionFee(encodedInstruction);

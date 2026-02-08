@@ -7,13 +7,17 @@ import {
   type CustomInstruction,
   getPersonalAccountAddress,
 } from "../../../../packages/flare-smart-accounts-viem/src/utils/smart-accounts";
-import { publicClient } from "../../../../packages/flare-smart-accounts-viem/src/utils/client";
-import { abi as instructionsAbi } from "../../../../packages/flare-smart-accounts-viem/src/abis/CustomInstructionsFacet";
+import { account, publicClient } from "../../../../packages/flare-smart-accounts-viem/src/utils/client";
+import {
+  abi,
+  abi as instructionsAbi,
+} from "../../../../packages/flare-smart-accounts-viem/src/abis/CustomInstructionsFacet";
 import { abi as vaultAbi } from "../../../../packages/flare-smart-accounts-viem/src/abis/Vault";
 
 import { MASTER_ACCOUNT_CONTROLLER_ADDRESS } from "../../../../packages/flare-smart-accounts-viem/src/utils/smart-accounts";
 import { toHex } from "viem";
-import { xrpToDrops } from "xrpl";
+import { Client, Wallet, xrpToDrops } from "xrpl";
+import { sendCustomInstruction } from "../../../../packages/flare-smart-accounts-viem/src/custom-instructions";
 
 async function encodeCustomInstruction(instructions: CustomInstruction[], walletId: number) {
   const encoded = (await publicClient.readContract({
@@ -31,6 +35,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (req.method !== "POST") {
       return res.status(405).end();
     }
+
+    let client: Client | null = null;
+
+    if (!process.env.ISSUER_SECRET) {
+      return res.status(500).json({ error: "Server env missing" });
+    }
+
+    client = new Client("wss://s.altnet.rippletest.net:51233");
+    await client.connect();
 
     const contractAddress = process.env.VAULT_CONTRACT_ADDRESS;
     if (!contractAddress) {
@@ -66,8 +79,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       },
     ] as CustomInstruction[];
 
+    let xrplClient = new Client("wss://s.altnet.rippletest.net:51233");
+    const xrplWallet = Wallet.fromSeed(process.env.ISSUER_SEED!);
+
     await registerCustomInstruction(customInstructions);
     const encodedInstruction = await encodeCustomInstruction(customInstructions, walletId);
+    await sendCustomInstruction({
+      encodedInstruction,
+      xrplClient,
+      xrplWallet,
+    });
 
     const operatorXrplAddress = (await getOperatorXrplAddresses())[0];
     const instructionFee = await getInstructionFee(encodedInstruction);
