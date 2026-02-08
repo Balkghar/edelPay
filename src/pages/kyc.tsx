@@ -458,7 +458,7 @@ export default function KYC() {
                   </Button>
                   
                   <div className="text-center">
-                    <p className="text-sm text-gray-500 mb-3">Don't have Swiss digital identity?</p>
+                    <p className="text-sm text-gray-500 mb-3">Don&apos;t have Swiss digital identity?</p>
                     <Button
                       onClick={() => {
                         // Simulate successful verification with demo credentials
