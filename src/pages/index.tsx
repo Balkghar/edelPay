@@ -1,204 +1,117 @@
 import { Button } from "@/components/ui/button";
-import {
-    Drawer,
-    DrawerContent,
-    DrawerDescription,
-    DrawerHeader,
-    DrawerTitle,
-    DrawerTrigger,
-} from "@/components/ui/drawer";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useWallet } from "@/hooks/useWallet";
 import { Inter } from "next/font/google";
 import Head from "next/head";
-import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useRouter } from "next/router";
+import { useState } from "react";
 
 const inter = Inter({ subsets: ["latin"] });
 
-// This page will be redirected by middleware, but we keep this component
-// just in case it's accessed before middleware processes it
 export default function Home() {
-  const [enableJwt, setEnableJwt] = useState<boolean>(false);
-  const [isMobile, setIsMobile] = useState<boolean>(false);
+  const router = useRouter();
+  const [selectedRole, setSelectedRole] = useState<string | null>(null);
 
-  const {
-    xrpAddress,
-    isLoading,
-    error,
-    xummQrCode,
-    xummJumpLink,
-    connectXUMM,
-    connectGEM,
-    connectCrossmark,
-    disconnect,
-    isRetrieved,
-  } = useWallet(enableJwt);
-
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
-
+  const handleRoleSelection = (role: 'buyer' | 'seller') => {
+    // Store the selected role in session storage
+    sessionStorage.setItem('selectedRole', role);
+    
+    // Redirect to the KYC page with role stored
+    router.push('/kyc');
+  };
   return (
     <>
       <Head>
-        <title>Home - EdelPay</title>
-        <meta name="description" content="Welcome to EdelPay - Secure payment platform with XRPL wallet integration" />
+        <title>EdelPay - Choose Your Role</title>
+        <meta name="description" content="EdelPay - Secure XRPL payment platform. Choose your role: Seller or Buyer" />
       </Head>
-      <main
-        className={`flex min-h-screen flex-col items-center justify-between p-24 ${inter.className}`}
-      >
-        <div className="flex flex-col items-center">
-        <h1 className="text-4xl font-bold text-center">
-          Welcome to XRPL wallet connect template!
-        </h1>
-        <p className="text-center mt-4 text-lg">
-          This is a template for creating a wallet connect app with XRPL. Includes basic JWT authentication and 3 different wallet types.
-        </p>
-        <a
-          href="https://github.com/Aaditya-T"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center justify-center"
-        >
-          <Image
-            src="https://github.githubassets.com/assets/GitHub-Mark-ea2971cee799.png"
-            alt="Github logo"
-            width={24}
-            height={24}
-            className="mr-2"
-          />
-          <span>Crafted by Aaditya (A.K.A Ghost!)</span>
-        </a>
-        {error && (
-          <div className="mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
-            <p className="font-semibold">Error:</p>
-            <p>{error}</p>
+      <main className={`min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 ${inter.className}`}>
+        <div className="container mx-auto px-6 py-16">
+          {/* Header */}
+          <div className="text-center mb-16">
+            <h1 className="text-5xl font-bold text-gray-900 mb-4">
+              Welcome to <span className="text-blue-600">EdelPay</span>
+            </h1>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
+              Secure payments powered by XRPL blockchain with Edel-ID verification
+            </p>
           </div>
-        )}
 
-        <Drawer>
-          <DrawerTrigger
-            className="mt-8 bg-blue-500 hover:bg-blue-600 w-48 h-12 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed"
-            onClick={connectXUMM}
-            disabled={isLoading}
-          >
-            {isLoading ? "Connecting..." : "Connect with XAMAN"}
-          </DrawerTrigger>
-          <DrawerContent className="bg-white p-4">
-            <DrawerHeader className="flex flex-col items-center">
-              <DrawerTitle>Scan this QR code to sign in with Xaman!</DrawerTitle>
-            </DrawerHeader>
-            <DrawerDescription className="flex flex-col items-center">
-              {xummQrCode !== "" ? (
-                <Image
-                  src={xummQrCode}
-                  alt="Xaman QR code"
-                  width={200}
-                  height={200}
-                  priority
-                />
-              ) : (
-                <div className="flex flex-col space-y-3">
-                  <Skeleton className="h-[250px] w-[250px] rounded-xl bg-gray-300" />
+          {/* Role Selection */}
+          <div className="max-w-4xl mx-auto">
+            <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
+              Choose Your Role
+            </h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto">
+              {/* Seller Card */}
+              <div className="bg-white rounded-2xl shadow-xl p-8 border-2 border-transparent hover:border-blue-500 transition-all duration-300 transform hover:scale-105">
+                <div className="text-center">
+                  <div className="text-6xl mb-6">🏪</div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-4">Seller</h3>
+                  <p className="text-gray-600 mb-6">
+                    Sell products with XRPL payments and manage your customer subscriptions.
+                  </p>
+                  <ul className="text-sm text-gray-500 mb-8 space-y-2">
+                    <li>✓ Sell Mac Mini Pro (0.3 XRP)</li>
+                    <li>✓ Track customer payments</li>
+                    <li>✓ 12-month installment plans</li>
+                    <li>✓ Payment notifications</li>
+                  </ul>
+                  <Button
+                    onClick={() => handleRoleSelection('seller')}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 text-lg font-semibold"
+                  >
+                    Continue as Seller
+                  </Button>
                 </div>
-              )}
-              {xummJumpLink !== "" && (
-                <Button
-                  className="mt-2 bg-blue-400 hover:bg-blue-500 w-48 h-12"
-                  onClick={() => {
-                    window.open(xummJumpLink, "_blank");
-                  }}
-                >
-                  Open in Xaman
-                </Button>
-              )}
-            </DrawerDescription>
-          </DrawerContent>
-        </Drawer>
+              </div>
 
-        <Button
-          className="mt-2 bg-blue-400 hover:bg-blue-500 w-48 h-12 disabled:opacity-50 disabled:cursor-not-allowed"
-          onClick={connectGEM}
-          disabled={isLoading}
-        >
-          {isLoading ? "Connecting..." : "Connect with GEM"}
-        </Button>
-
-        <Button
-          className="mt-2 bg-orange-500 hover:bg-orange-600 w-48 h-12 disabled:opacity-50 disabled:cursor-not-allowed"
-          onClick={connectCrossmark}
-          disabled={isLoading}
-        >
-          {isLoading ? "Connecting..." : "Connect with Crossmark"}
-        </Button>
-
-        <div className="mt-2">
-          <input
-            type="checkbox"
-            id="enableJwt"
-            name="enableJwt"
-            checked={enableJwt}
-            onChange={() => setEnableJwt(!enableJwt)}
-          />
-          <label htmlFor="enableJwt" className="ml-2">
-            Enable JWT
-          </label>
-        </div>
-
-        <div className="mt-8">
-          {xrpAddress !== "" && (
-            <div className="text-center">
-              <p>
-                Your XRP address is:{" "}
-                <a
-                  className="font-bold text-blue-600 hover:text-blue-800 underline"
-                  href={`https://bithomp.com/explorer/${xrpAddress}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {xrpAddress.slice(0, 3)}...{xrpAddress.slice(-3)}
-                </a>
-              </p>
-              {isRetrieved && (
-                <p className="mt-2">
-                  <span className="text-sm text-gray-600">
-                    (Retrieved from cookies)
-                  </span>
-                </p>
-              )}
-              <Button
-                className="mt-4 bg-red-500 hover:bg-red-600 w-48 h-10"
-                onClick={disconnect}
-              >
-                Disconnect
-              </Button>
+              {/* Buyer Card */}
+              <div className="bg-white rounded-2xl shadow-xl p-8 border-2 border-transparent hover:border-green-500 transition-all duration-300 transform hover:scale-105">
+                <div className="text-center">
+                  <div className="text-6xl mb-6">💳</div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-4">Buyer</h3>
+                  <p className="text-gray-600 mb-6">
+                    Purchase products with XRPL and pay in convenient monthly installments.
+                  </p>
+                  <ul className="text-sm text-gray-500 mb-8 space-y-2">
+                    <li>✓ Buy Mac Mini Pro (0.3 XRP)</li>
+                    <li>✓ Pay in 12 monthly installments</li>
+                    <li>✓ 0.025 XRP per month</li>
+                    <li>✓ Secure XRPL payments</li>
+                  </ul>
+                  <Button
+                    onClick={() => handleRoleSelection('buyer')}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white py-3 text-lg font-semibold"
+                  >
+                    Continue as Buyer
+                  </Button>
+                </div>
+              </div>
             </div>
-          )}
+          </div>
+
+          {/* Features */}
+          <div className="mt-20 text-center">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+              <div className="text-center">
+                <div className="text-4xl mb-4">🔒</div>
+                <h4 className="text-lg font-semibold text-gray-900 mb-2">Edel-ID Verification</h4>
+                <p className="text-gray-600 text-sm">Secure identity verification for all users</p>
+              </div>
+              <div className="text-center">
+                <div className="text-4xl mb-4">⚡</div>
+                <h4 className="text-lg font-semibold text-gray-900 mb-2">XRPL Payments</h4>
+                <p className="text-gray-600 text-sm">Fast and secure blockchain payments</p>
+              </div>
+              <div className="text-center">
+                <div className="text-4xl mb-4">📱</div>
+                <h4 className="text-lg font-semibold text-gray-900 mb-2">Xaman Wallet</h4>
+                <p className="text-gray-600 text-sm">Connect with your XRPL wallet</p>
+              </div>
+            </div>
+          </div>
         </div>
-
-        <div className="mt-8">
-          <p className="text-center">
-            Have a suggestion or found a bug? Open an issue on the{" "}
-            <a
-              href="https://github.com/Aaditya-T/xrpl-wallet-connect"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-500"
-            >
-              GitHub repository
-            </a>
-          </p>
-        </div>
-
-      </div>
-
-    </main>
+      </main>
     </>
   );
 }

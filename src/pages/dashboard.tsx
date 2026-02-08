@@ -63,7 +63,7 @@ interface InstallmentPayment {
 
 export default function Dashboard() {
   const router = useRouter();
-  const { xrpAddress, isLoading: walletLoading, kycCompleted } = useWalletContext();
+  const { xrpAddress, isLoading: walletLoading, kycCompleted, isContextLoaded } = useWalletContext();
   const { processPayment, createPaymentRequest, isProcessing } = useXRPLPayment();
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [paymentHistory, setPaymentHistory] = useState<PaymentHistory[]>([]);
@@ -75,12 +75,12 @@ export default function Dashboard() {
 
   // Redirect if wallet not connected or not onboarded
   useEffect(() => {
-    if (!walletLoading) {
+    if (!walletLoading && isContextLoaded) {
       if (!xrpAddress || !kycCompleted) {
         router.push('/kyc');
       }
     }
-  }, [xrpAddress, kycCompleted, walletLoading, router]);
+  }, [xrpAddress, kycCompleted, walletLoading, router, isContextLoaded]);
 
   // Mock data - replace with real API calls
   useEffect(() => {
@@ -91,70 +91,7 @@ export default function Dashboard() {
 
   const loadUserData = async () => {
     setIsLoading(true);
-    
-    // Mock subscriptions data
-    const mockSubscriptions: Subscription[] = [
-      {
-        id: 'sub-1',
-        name: 'Premium Service',
-        description: 'Premium access to advanced features',
-        monthlyAmount: 29.99,
-        currency: 'USD',
-        startDate: '2024-01-01',
-        nextPaymentDate: '2024-03-01',
-        isPaid: false,
-        unpaidMonths: 2,
-        totalDue: 59.98,
-        status: 'overdue'
-      },
-      {
-        id: 'sub-2', 
-        name: 'Basic Plan',
-        description: 'Basic subscription with essential features',
-        monthlyAmount: 9.99,
-        currency: 'USD',
-        startDate: '2024-02-01',
-        nextPaymentDate: '2024-03-01',
-        isPaid: true,
-        unpaidMonths: 0,
-        totalDue: 0,
-        status: 'active'
-      },
-      {
-        id: 'sub-3',
-        name: 'Enterprise Solution',
-        description: 'Enterprise solution with dedicated support',
-        monthlyAmount: 99.99,
-        currency: 'USD',
-        startDate: '2023-12-01',
-        nextPaymentDate: '2024-03-01',
-        isPaid: false,
-        unpaidMonths: 1,
-        totalDue: 99.99,
-        status: 'overdue'
-      }
-    ];
-
-    const mockHistory: PaymentHistory[] = [
-      {
-        id: 'pay-1',
-        subscriptionId: 'sub-2',
-        amount: 9.99,
-        currency: 'USD',
-        date: '2024-02-01',
-        status: 'completed',
-        transactionHash: '0x123...abc'
-      },
-      {
-        id: 'pay-2',
-        subscriptionId: 'sub-1',
-        amount: 29.99,
-        currency: 'USD',
-        date: '2024-01-01',
-        status: 'completed',
-        transactionHash: '0x456...def'
-      }
-    ];
+  
 
     // Mock installment products data
     const mockInstallmentProducts: InstallmentProduct[] = [
@@ -174,36 +111,6 @@ export default function Dashboard() {
         purchaseDate: '2023-08-15',
         imageUrl: '/images/mac-mini.jpg'
       },
-      {
-        id: 'product-2',
-        name: 'iPhone 15 Pro',
-        description: 'iPhone 15 Pro 128GB Titanium Blue',
-        totalPrice: 1199.99,
-        currency: 'USD',
-        monthlyPayment: 99.99,
-        totalMonths: 12,
-        paidMonths: 12,
-        remainingMonths: 0,
-        nextPaymentDate: '2024-02-01',
-        isPaid: true,
-        status: 'completed',
-        purchaseDate: '2023-02-01'
-      },
-      {
-        id: 'product-3',
-        name: 'Samsung Galaxy Watch 6',
-        description: 'Smartwatch with GPS and health monitoring',
-        totalPrice: 329.99,
-        currency: 'USD',
-        monthlyPayment: 55.00,
-        totalMonths: 6,
-        paidMonths: 2,
-        remainingMonths: 4,
-        nextPaymentDate: '2024-03-10',
-        isPaid: false,
-        status: 'overdue',
-        purchaseDate: '2023-12-10'
-      }
     ];
 
     const mockInstallmentPayments: InstallmentPayment[] = [
@@ -229,8 +136,6 @@ export default function Dashboard() {
       }
     ];
 
-    setSubscriptions(mockSubscriptions);
-    setPaymentHistory(mockHistory);
     setInstallmentProducts(mockInstallmentProducts);
     setInstallmentPayments(mockInstallmentPayments);
     setIsLoading(false);
@@ -382,7 +287,7 @@ export default function Dashboard() {
     return diffDays;
   };
 
-  if (walletLoading || !xrpAddress) {
+  if (walletLoading || !isContextLoaded || !xrpAddress) {
     return (
       <div className={`min-h-screen bg-gray-50 ${inter.className}`}>
         <WalletHeader />

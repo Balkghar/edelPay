@@ -12,6 +12,7 @@ import { useWalletContext } from "@/contexts/WalletContext";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { useEffect, useState } from "react";
 
 export default function WalletHeader() {
   const router = useRouter();
@@ -27,6 +28,16 @@ export default function WalletHeader() {
     disconnect,
     kycCompleted,
   } = useWalletContext();
+  
+  const [selectedRole, setSelectedRole] = useState<'buyer' | 'seller' | null>(null);
+  
+  // Get selected role from sessionStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const role = sessionStorage.getItem('selectedRole') as 'buyer' | 'seller' | null;
+      setSelectedRole(role);
+    }
+  }, [router.pathname]);
 
   return (
     <header className="w-full bg-white shadow-sm border-b border-gray-200">
@@ -34,9 +45,20 @@ export default function WalletHeader() {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <div className="flex items-center space-x-8">
-            <Link href="/" className="text-xl font-bold text-gray-900 hover:text-blue-600">
-              EdelPay
-            </Link>
+            <div className="flex items-center space-x-3">
+              <Link href="/" className="text-xl font-bold text-gray-900 hover:text-blue-600">
+                EdelPay
+              </Link>
+              {selectedRole && (
+                <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                  selectedRole === 'buyer' 
+                    ? 'bg-blue-100 text-blue-800' 
+                    : 'bg-green-100 text-green-800'
+                }`}>
+                  {selectedRole === 'buyer' ? '💳 Buyer' : '🏪 Seller'}
+                </span>
+              )}
+            </div>
             
             {/* Navigation Links */}
             {xrpAddress && (

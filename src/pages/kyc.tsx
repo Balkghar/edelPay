@@ -1,4 +1,13 @@
 import { Button } from "@/components/ui/button";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
+import { Skeleton } from "@/components/ui/skeleton";
 import WalletHeader from "@/components/WalletHeader";
 import { useWalletContext } from "@/contexts/WalletContext";
 import { Inter } from "next/font/google";
@@ -26,8 +35,21 @@ interface VerificationData {
 export default function KYC() {
   const router = useRouter();
 
-  // ✅ only addition: xrpAddress (needed for credential offer)
-  const { setKycCompleted, kycCompleted, xrpAddress } = useWalletContext();
+  // Wallet context with same properties as header
+  const { 
+    setKycCompleted, 
+    kycCompleted, 
+    xrpAddress, 
+    isContextLoaded,
+    isLoading: walletLoading,
+    error: walletError,
+    xummQrCode,
+    xummJumpLink,
+    connectXUMM,
+    connectGEM,
+    connectCrossmark,
+    disconnect
+  } = useWalletContext();
 
   const [isLoading, setIsLoading] = useState(false);
   const [verificationId, setVerificationId] = useState<string | null>(null);
@@ -35,21 +57,47 @@ export default function KYC() {
   const [qrCodeImage, setQrCodeImage] = useState<string>("");
   const [verificationData, setVerificationData] = useState<VerificationData | null>(null);
   const [error, setError] = useState<string>("");
+  const [selectedRole, setSelectedRole] = useState<'buyer' | 'seller' | null>(null);
 
   // ✅ Xaman / XUMM credential offer state (added)
   const [xamanQrUrl, setXamanQrUrl] = useState<string>("");
   const [xamanLoading, setXamanLoading] = useState(false);
   const [xamanError, setXamanError] = useState<string>("");
+  const [kycCredentialGenerated, setKycCredentialGenerated] = useState(false);
 
   // ✅ HARD LOCK to avoid loops / spam (critical)
   const xamanTriggeredRef = useRef(false);
 
-  // If already onboarded, redirect to dashboard
+  // Get selected role from sessionStorage and reset KYC status
   useEffect(() => {
-    if (kycCompleted) {
-      router.push("/dashboard");
+    if (typeof window !== 'undefined') {
+      const role = sessionStorage.getItem('selectedRole') as 'buyer' | 'seller' | null;
+      setSelectedRole(role);
+      
+      // If no role selected, redirect to home
+      if (!role) {
+        router.push('/');
+      } else {
+        // Reset KYC status to force new verification
+        setKycCompleted(false);
+      }
     }
-  }, [kycCompleted, router]);
+  }, [router, setKycCompleted]);
+
+  // Only redirect if user is fully completed and not in the middle of any process
+  useEffect(() => {
+    if (isContextLoaded && kycCompleted && selectedRole && !verificationId && !verificationData) {
+      const targetPath = selectedRole === 'buyer' ? '/buyer-dashboard' : '/seller-dashboard';
+      router.push(targetPath);
+    }
+  }, [kycCompleted, router, isContextLoaded, selectedRole, verificationId, verificationData]);
+
+  // Function to handle completing KYC and redirecting
+  const handleCompleteKYC = () => {
+    setKycCompleted(true);
+    const targetPath = selectedRole === 'buyer' ? '/buyer-dashboard' : '/seller-dashboard';
+    router.push(targetPath);
+  };
 
   const startVerification = async () => {
     setIsLoading(true);
@@ -59,6 +107,7 @@ export default function KYC() {
     setXamanQrUrl("");
     setXamanLoading(false);
     setXamanError("");
+    setKycCredentialGenerated(false);
     xamanTriggeredRef.current = false;
 
     try {
@@ -191,6 +240,7 @@ export default function KYC() {
 
       const data = await resp.json();
       setXamanQrUrl(data.payload.refs.qr_png);
+      setKycCredentialGenerated(true);
     } catch (err: any) {
       // allow retry if it failed
       xamanTriggeredRef.current = false;
@@ -221,6 +271,7 @@ export default function KYC() {
     setXamanQrUrl("");
     setXamanLoading(false);
     setXamanError("");
+    setKycCredentialGenerated(false);
     xamanTriggeredRef.current = false;
   };
 
@@ -261,8 +312,13 @@ export default function KYC() {
         <main className="flex flex-col items-center justify-center p-24">
           <div className="flex flex-col items-center space-y-8 max-w-md w-full">
             <div className="text-center">
-              <h1 className="text-4xl font-bold text-gray-900 mb-4">KYC Verification</h1>
-              <p className="text-xl text-gray-600">Verify your identity with Edel-ID</p>
+              <div className="text-6xl mb-4">{selectedRole === 'buyer' ? '💳' : '🏨'}</div>
+              <h1 className="text-4xl font-bold text-gray-900 mb-4">
+                {selectedRole === 'buyer' ? 'Buyer' : 'Seller'} KYC Verification
+              </h1>
+              <p className="text-xl text-gray-600">
+                Verify your identity to {selectedRole === 'buyer' ? 'purchase products' : 'sell products'}
+              </p>
             </div>
 
             {error && (
@@ -289,13 +345,38 @@ export default function KYC() {
                   </div>
                 </div>
 
-                <Button
-                  onClick={startVerification}
-                  disabled={isLoading}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-8 rounded-lg text-lg transition-colors duration-200"
-                >
-                  {isLoading ? "Starting..." : "Start Verification"}
-                </Button>
+                <div className="space-y-4">
+                  <Button
+                    onClick={startVerification}
+                    disabled={isLoading}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-8 rounded-lg text-lg transition-colors duration-200"
+                  >
+                    {isLoading ? "Starting..." : "Start Verification"}
+                  </Button>
+                  
+                  <div className="text-center">
+                    <p className="text-sm text-gray-500 mb-3">Don't have Swiss digital identity?</p>
+                    <Button
+                      onClick={() => {
+                        // Simulate successful verification with demo credentials
+                        setVerificationData({
+                          state: "SUCCESS",
+                          verifiedClaims: [{
+                            age_over_18: "true",
+                            given_name: "Demo",
+                            family_name: "User"
+                          }]
+                        });
+                        setVerificationId("demo_verification");
+                      }}
+                      variant="outline"
+                      className="bg-gray-50 hover:bg-gray-100 text-gray-700 border-gray-300"
+                    >
+                      🎭 Skip KYC (Demo Mode)
+                    </Button>
+                    <p className="text-xs text-gray-400 mt-2">For testing purposes only</p>
+                  </div>
+                </div>
               </div>
             ) : (
               <div className="bg-white p-8 rounded-lg shadow-lg border border-gray-200 w-full">
@@ -383,68 +464,167 @@ export default function KYC() {
                           </div>
                         ))}
                       </div>
-
-                      {/* ✅ ADDED: Xaman QR flow INSIDE the same green box */}
+                      {/* Wallet Connection Section */}
                       <div className="mt-6 pt-4 border-t border-green-200">
-                        <h4 className="text-md font-semibold text-gray-800 mb-2 text-center">
-                          Accept your KYC credential in Xaman
+                        <h4 className="text-md font-semibold text-gray-800 mb-4 text-center">
+                          Connect Your XRPL Wallet
                         </h4>
 
-                        {!xrpAddress && (
-                          <p className="text-sm text-gray-600 text-center">
-                            Connect your wallet in the header, then click the button below.
-                          </p>
+                        {walletError && (
+                          <div className="text-red-600 text-sm text-center mb-3">
+                            Error: {walletError}
+                          </div>
                         )}
 
-                        {xamanError && (
-                          <p className="text-sm text-red-600 text-center mt-2">{xamanError}</p>
-                        )}
-
-                        {xamanLoading && (
-                          <p className="text-sm text-gray-600 text-center mt-2">
-                            Preparing credential offer...
-                          </p>
-                        )}
-
-                        {xamanQrUrl && (
-                          <>
-                            <p className="text-sm text-gray-600 mb-3 text-center mt-2">
-                              Scan this QR code with Xaman
-                            </p>
-                            <div className="flex justify-center mb-2">
-                              <Image
-                                src={xamanQrUrl}
-                                alt="XUMM QR"
-                                width={200}
-                                height={200}
-                                className="border border-gray-200 rounded-lg"
-                              />
+                        {xrpAddress ? (
+                          <div className="text-center">
+                            <div className="flex items-center justify-center space-x-2 text-sm text-green-600 mb-3">
+                              <span>✅</span>
+                              <span>Wallet Connected: {xrpAddress.slice(0, 6)}...{xrpAddress.slice(-4)}</span>
                             </div>
-                          </>
-                        )}
+                            <div className="flex justify-center mb-4">
+                              <Button
+                                onClick={disconnect}
+                                variant="outline"
+                                size="sm"
+                                className="text-red-600 border-red-300 hover:bg-red-50"
+                              >
+                                Disconnect Wallet
+                              </Button>
+                            </div>
+                            
+                            {(verificationId !== "demo_verification" || selectedRole === 'buyer') && (
+                              <div className="border-t border-green-200 pt-4">
+                                <h5 className="text-sm font-semibold text-gray-800 mb-3 text-center">
+                                  {selectedRole === 'buyer' ? 'Accept KYC Credential (Required)' : 'Accept KYC Credential (Optional)'}
+                                </h5>
+                                {xamanLoading && (
+                                  <p className="text-sm text-gray-600 mb-2 text-center">
+                                    Preparing credential offer...
+                                  </p>
+                                )}
+                                {xamanQrUrl && (
+                                  <>
+                                    <p className="text-sm text-gray-600 mb-3 text-center">
+                                      Scan this QR code with Xaman to accept your KYC credential
+                                    </p>
+                                    <div className="flex justify-center mb-2">
+                                      <Image
+                                        src={xamanQrUrl}
+                                        alt="XUMM QR"
+                                        width={200}
+                                        height={200}
+                                        className="border border-gray-200 rounded-lg"
+                                      />
+                                    </div>
+                                  </>
+                                )}
+                                {!xamanQrUrl && (
+                                  <div className="flex justify-center">
+                                    <Button
+                                      onClick={createXamanQr}
+                                      disabled={xamanLoading}
+                                      size="sm"
+                                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                                    >
+                                      {xamanLoading ? "Preparing..." : "Generate Credential QR"}
+                                    </Button>
+                                  </div>
+                                )}
+                                {xamanError && (
+                                  <p className="text-sm text-red-600 mt-2 text-center">{xamanError}</p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="text-center">
+                            <p className="text-sm text-gray-600 mb-4">
+                              Connect your XRPL wallet to continue
+                            </p>
+                            
+                            <div className="flex items-center justify-center space-x-2 mb-4">
+                              <Drawer>
+                                <DrawerTrigger
+                                  className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                                  onClick={connectXUMM}
+                                  disabled={walletLoading}
+                                >
+                                  {walletLoading ? "Connecting..." : "XAMAN"}
+                                </DrawerTrigger>
+                                <DrawerContent className="bg-white p-4">
+                                  <DrawerHeader className="flex flex-col items-center">
+                                    <DrawerTitle>Scan this QR code to sign in with Xaman!</DrawerTitle>
+                                  </DrawerHeader>
+                                  <DrawerDescription className="flex flex-col items-center">
+                                    {xummQrCode !== "" ? (
+                                      <Image
+                                        src={xummQrCode}
+                                        alt="Xaman QR code"
+                                        width={200}
+                                        height={200}
+                                        priority
+                                      />
+                                    ) : (
+                                      <div className="flex flex-col space-y-3">
+                                        <Skeleton className="h-[250px] w-[250px] rounded-xl bg-gray-300" />
+                                      </div>
+                                    )}
+                                    {xummJumpLink !== "" && (
+                                      <Button
+                                        className="mt-2 bg-blue-400 hover:bg-blue-500 w-48 h-12"
+                                        onClick={() => {
+                                          window.open(xummJumpLink, "_blank");
+                                        }}
+                                      >
+                                        Open in Xaman
+                                      </Button>
+                                    )}
+                                  </DrawerDescription>
+                                </DrawerContent>
+                              </Drawer>
 
-                        {/* Manual trigger if wallet connects after SUCCESS */}
-                        {!xamanQrUrl && (
-                          <div className="mt-3">
-                            <Button
-                              onClick={createXamanQr}
-                              disabled={xamanLoading || !xrpAddress}
-                              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white"
-                            >
-                              {xamanLoading ? "Preparing..." : "Generate Xaman QR"}
-                            </Button>
+                              <Button
+                                onClick={connectGEM}
+                                disabled={walletLoading}
+                                size="sm"
+                                className="bg-blue-400 hover:bg-blue-500 text-white"
+                              >
+                                GEM
+                              </Button>
+
+                              <Button
+                                onClick={connectCrossmark}
+                                disabled={walletLoading}
+                                size="sm"
+                                className="bg-orange-500 hover:bg-orange-600 text-white"
+                              >
+                                Crossmark
+                              </Button>
+                            </div>
+                            
+                            <div className="flex items-center justify-center space-x-2 text-sm text-orange-600">
+                              <span>⚠️</span>
+                              <span>Wallet connection required to continue</span>
+                            </div>
                           </div>
                         )}
                       </div>
 
                       <Button
-                        onClick={() => {
-                          setKycCompleted(true);
-                          window.location.href = "/payer";
-                        }}
-                        className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white"
+                        onClick={handleCompleteKYC}
+                        disabled={
+                          !xrpAddress || 
+                          (selectedRole === 'buyer' && verificationId !== "demo_verification" && !kycCredentialGenerated)
+                        }
+                        className="w-full mt-4 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white"
                       >
-                        Continue to Payment
+                        {!xrpAddress 
+                          ? 'Connect Wallet to Continue' 
+                          : (selectedRole === 'buyer' && verificationId !== "demo_verification" && !kycCredentialGenerated)
+                            ? 'Generate KYC Credential to Continue'
+                            : `Continue to ${selectedRole === 'buyer' ? 'Shop Mac Mini Pro' : 'Seller Dashboard'}`
+                        }
                       </Button>
                     </div>
                   )}
