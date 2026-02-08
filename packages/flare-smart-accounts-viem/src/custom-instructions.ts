@@ -29,7 +29,7 @@ async function encodeCustomInstruction(instructions: CustomInstruction[], wallet
   return ("0xff" + toHex(walletId, { size: 1 }).slice(2) + encodedInstruction.slice(6)) as `0x${string}`;
 }
 
-async function sendCustomInstruction({
+export async function sendCustomInstruction({
   encodedInstruction,
   xrplClient,
   xrplWallet,
@@ -105,7 +105,6 @@ async function main() {
   const pinNoticeAmount = 1 * 10 ** 18;
   const pinNoticeMessage = "Hello";
 
-
   //    {
   //       targetContract: piggyBankAddress,
   //       value: BigInt(depositAmount),
@@ -135,14 +134,13 @@ async function main() {
         args: [],
       }),
     },
-
   ] as CustomInstruction[];
   console.log("Custom instructions:", customInstructions, "\n");
 
   const xrplClient = new Client("wss://s.altnet.rippletest.net:51233");
   console.log("COUCOU JE SUIS PASSE");
   const xrplWallet = Wallet.fromSeed("sEdTjZgNWrZgWhd7mTpYUcp2erwJKyU");
-    console.log("COUCOU JE SUIS PASSE ENCORE");
+  console.log("COUCOU JE SUIS PASSE ENCORE");
 
   const personalAccountAddress = await getPersonalAccountAddress(xrplWallet.address);
   console.log("Personal account address:", personalAccountAddress, "\n");
@@ -173,7 +171,6 @@ async function main() {
   });
 
   console.log("Welcome message is :", welcomeMessage);
-
 }
 
 void main()
