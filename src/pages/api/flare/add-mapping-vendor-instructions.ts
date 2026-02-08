@@ -4,15 +4,22 @@ import {
   getInstructionFee,
   getOperatorXrplAddresses,
   registerCustomInstruction,
-  type CustomInstruction
+  type CustomInstruction,
+  getPersonalAccountAddress,
 } from "../../../../packages/flare-smart-accounts-viem/src/utils/smart-accounts";
 import { publicClient } from "../../../../packages/flare-smart-accounts-viem/src/utils/client";
 import { abi as instructionsAbi } from "../../../../packages/flare-smart-accounts-viem/src/abis/CustomInstructionsFacet";
-import { abi as vaultAbi } from "../../../../packages/flare-smart-accounts-viem/src/abis/Vault";
+import { abi as vaultAbi } from "../../../../packages/flare-smart-accounts-viem/src/abis/IERC20";
+import { Client, Wallet } from "xrpl";
+
 
 import { MASTER_ACCOUNT_CONTROLLER_ADDRESS } from "../../../../packages/flare-smart-accounts-viem/src/utils/smart-accounts";
 import { toHex } from "viem";
 
+
+const textToHex = (text: string) => Buffer.from(text, "utf8").toString("hex").toUpperCase();
+
+// VA ETRE SIGNER PAR PLATFORM
 async function encodeCustomInstruction(
   instructions: CustomInstruction[],
   walletId: number
@@ -34,9 +41,20 @@ export default async function handler(
   res: NextApiResponse
 ) {
   try {
+    let client: Client | null = null;
+
     if (req.method !== "POST") {
       return res.status(405).end();
     }
+
+    if (!process.env.ISSUER_SECRET) {
+      return res.status(500).json({ error: "Server env missing" });
+    }
+
+    client = new Client("wss://s.altnet.rippletest.net:51233");
+    await client.connect();
+
+    const issuerWallet = Wallet.fromSeed(process.env.ISSUER_SECRET);
 
     const contractAddress = process.env.VAULT_CONTRACT_ADDRESS;
     if (!contractAddress) {
@@ -45,9 +63,12 @@ export default async function handler(
 
     const walletId = 0;
 
-    // En FXRP
-    const collateralAmount = req.body.collateralAmount as string;
-    const addressVendor = req.body.addressVendor as string;
+    const vendorXrplAddress = req.body.vendorAddress as string;
+    const payerXrplAddress = req.body.payerAddress as string;
+
+    // Convertit les adresses XRPL en adresses Flare
+    const vendorFlareAddress = await getPersonalAccountAddress(vendorXrplAddress);
+    const payerFlareAddress = await getPersonalAccountAddress(payerXrplAddress);
 
     const customInstructions: CustomInstruction[] = [
       {
@@ -55,8 +76,11 @@ export default async function handler(
         value: BigInt(0),
         data: encodeFunctionData({
           abi: vaultAbi,
-          functionName: "depositCollateral",
-          args: [ addressVendor, BigInt(collateralAmount) ],
+          functionName: "addVendorPayer",
+          args: [
+            vendorFlareAddress as `0x${string}`,
+            payerFlareAddress as `0x${string}`
+          ],
         }),
       },
     ] as CustomInstruction[];
@@ -83,7 +107,16 @@ export default async function handler(
       ],
     };
 
-    return res.status(200).json({ txJson });
+    const result = await client.submitAndWait(txJson as any, {
+      wallet: issuerWallet,
+      autofill: true,
+    });
+
+    if (  result.result?.meta && typeof result.result.meta !== "string" && result.result.meta.TransactionResult === "tesSUCCESS") {
+      return res.status(200).json({ message: "Transaction successful", details: result });
+    } else {
+      return res.status(500).json({ error: "Transaction failed", details: result });
+    }
   } catch (err: any) {
     console.error(err);
     return res.status(500).json({ error: err.message });
