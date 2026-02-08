@@ -3,7 +3,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 interface StatusResponse {
   status: boolean;
   message?: string;
-  timestamp?: string;
+  timestamp?: number; // Changed to number (uint32)
 }
 
 export default async function handler(
@@ -29,7 +29,7 @@ export default async function handler(
     return res.status(200).json({
       status: shouldReturnTrue,
       message: shouldReturnTrue ? "Operation successful" : "Operation failed",
-      timestamp: new Date().toISOString()
+      timestamp: Math.floor(Date.now() / 1000) // Unix timestamp as uint32
     });
 
   } catch (error) {

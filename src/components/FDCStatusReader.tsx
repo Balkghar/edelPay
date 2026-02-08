@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 interface APIStatusData {
   status: boolean;
   message?: string;
-  timestamp?: string;
+  timestamp?: number; // Unix timestamp as uint32
 }
 
 interface FDCStatusState {
@@ -50,7 +50,7 @@ export const FDCStatusReader: React.FC = () => {
       queryParams: '{}', // No query params needed
       body: '{}', // No body for GET request
       postProcessJq: '.', // Identity filter - return full JSON response
-      abiSignature: `{"components": [{"internalType": "bool", "name": "status", "type": "bool"},{"internalType": "string", "name": "message", "type": "string"},{"internalType": "string", "name": "timestamp", "type": "string"}],"name": "task","type": "tuple"}` // ABI signature au format JSON pour notre réponse API
+      abiSignature: `{"components": [{"internalType": "bool", "name": "status", "type": "bool"},{"internalType": "string", "name": "message", "type": "string"},{"internalType": "uint32", "name": "timestamp", "type": "uint32"}],"name": "task","type": "tuple"}` // ABI signature au format JSON pour notre réponse API
     };
     
     console.log('🔧 FDC: Web2JSON request parameters:', web2JsonRequest);
@@ -218,8 +218,13 @@ export const FDCStatusReader: React.FC = () => {
             
             <div className="bg-white p-3 rounded border">
               <div className="text-gray-600 mb-1">Timestamp</div>
-              <div className="font-mono text-xs">
-                {state.apiData.timestamp ? new Date(state.apiData.timestamp).toLocaleString() : 'N/A'}
+              <div className="font-mono text-xs space-y-1">
+                <div>Unix: {state.apiData.timestamp || 'N/A'}</div>
+                {state.apiData.timestamp && (
+                  <div className="text-gray-500">
+                    {new Date(state.apiData.timestamp * 1000).toLocaleString()}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -254,7 +259,12 @@ export const FDCStatusReader: React.FC = () => {
             </div>
             
             <div className="text-xs text-purple-600 mt-3 p-2 bg-white rounded border">
-              ℹ️ This attestation proves that the API returned <strong>{state.apiData?.status ? 'True' : 'False'}</strong> at {state.apiData?.timestamp}
+              ℹ️ This attestation proves that the API returned <strong>{state.apiData?.status ? 'True' : 'False'}</strong> at Unix timestamp {state.apiData?.timestamp}
+              {state.apiData?.timestamp && (
+                <div className="text-gray-500 mt-1">
+                  ({new Date(state.apiData.timestamp * 1000).toLocaleString()})
+                </div>
+              )}
             </div>
             
             <details className="mt-3">
@@ -270,7 +280,7 @@ export const FDCStatusReader: React.FC = () => {
                   <div>
                     <strong>ABI Signature:</strong>
                     <pre className="mt-1 text-xs bg-gray-100 p-2 rounded overflow-x-auto">
-{`{"components": [{"internalType": "bool", "name": "status", "type": "bool"},{"internalType": "string", "name": "message", "type": "string"},{"internalType": "string", "name": "timestamp", "type": "string"}],"name": "task","type": "tuple"}`}
+{`{"components": [{"internalType": "bool", "name": "status", "type": "bool"},{"internalType": "string", "name": "message", "type": "string"},{"internalType": "uint32", "name": "timestamp", "type": "uint32"}],"name": "task","type": "tuple"}`}
                     </pre>
                   </div>
                 </div>
